@@ -18,10 +18,11 @@
   import DeletedSongs from './DeletedSongs.svelte';
 
   let { data } = $props();
-  const canEdit = can(data.brontoSession, 'songbook.write');
-  let songs = $state(data.songs as Song[]);
-  let songFolders = $state(data.songFolders as SongFolder[]);
-  let lastCacheSync = $state(data.lastCacheSync);
+  const canEdit = $derived(can(data.brontoSession, 'songbook.write'));
+  // From the load, then updated here as songs change and storage syncs
+  let songs = $derived(data.songs as Song[]);
+  let songFolders = $derived(data.songFolders as SongFolder[]);
+  let lastCacheSync = $derived(data.lastCacheSync);
 
   // Songs are linked to storage folders by folder name
   let reconciled = $derived(reconcileSongs(songs, songFolders));

@@ -1,6 +1,7 @@
 <script lang="ts">
     import { faBackwardStep, faChevronUp, faPause, faPlay, faRepeat, faTrashCan, faXmark } from '@fortawesome/free-solid-svg-icons';
     import Fa from 'svelte-fa';
+    import { untrack } from 'svelte';
     import type { PlayerSource } from '$lib/player/loadEngine';
     import { formatTime, PlayerState } from '$lib/player/playerState.svelte';
     import { songFileUrl } from '$lib/songFiles/songFile';
@@ -36,9 +37,9 @@
 
     let source = $derived(playChart && chartSource ? chartSource : fileSource ?? chartSource);
     let fileActions = $derived(editable && source?.kind == 'file'); // pin and delete
-    const player = new PlayerState(songId, () => source);
+    const player = untrack(() => new PlayerState(songId, () => source)); // one per song
     const transport = player.transport;
-    let soundfont = $state(soundfonts.selected); // kept from file to file
+    let soundfont = $state(untrack(() => soundfonts.selected)); // kept from file to file
     let sheetOpen = $state(false); // phones
     let confirmingDelete = $state<string | null>(null); // the path of the file asked about
 

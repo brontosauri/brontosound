@@ -37,3 +37,21 @@ export function googlePlaceToPlace(place: GooglePlace): Place {
     const placePage: PlaceLink[] = place.url ? [{ type: LocationLinkType.GOOGLE_MAPS_URL, value: place.url }] : [];
     return { location, links: [...placePage, ...placeLinks({ website: place.website, phone: place.international_phone_number })] };
 }
+
+let loading: Promise<void> | null = null;
+
+/** Loads the Google Maps JavaScript API, with Places, once per page. */
+export function loadGoogleMaps(apiKey: string): Promise<void> {
+    loading ??= new Promise((resolve, reject) => {
+        const callback = 'brontoGoogleMapsReady';
+        const global = window as unknown as Record<string, unknown>;
+        global[callback] = () => { delete global[callback]; resolve(); };
+
+        const script = document.createElement('script');
+        script.src = `https://maps.googleapis.com/maps/api/js?${new URLSearchParams({ key: apiKey, libraries: 'places', callback })}`;
+        script.async = true;
+        script.onerror = () => { loading = null; reject(new Error("Couldn't load Google Maps")); };
+        document.head.append(script);
+    });
+    return loading;
+}

@@ -3,7 +3,7 @@
   import { InteractionSender, LIVE_GIG_STATUS_NAMES, LiveGig, LiveGigInteraction, LiveGigStatus, LiveVenue } from '$lib/dbEntities/live';
   import { Button, Datepicker, Heading, Input, Label, Select, Spinner, Textarea, Toggle, Toolbar } from 'flowbite-svelte';
   import type { ActionData } from "./$types.js";
-  import { instanceToPlain, plainToInstance } from 'class-transformer';
+  import { instanceToPlain } from 'class-transformer';
   import GigInteractionCard from './GigInteractionCard.svelte';
   import ToastMessages from '$lib/components/ToastMessages.svelte';
   import type { DeepPartial } from 'typeorm';

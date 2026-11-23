@@ -7,7 +7,7 @@
     /** The song's tags, saved as soon as one is added or removed, when `editable` */
     let { songId, initialTags, allTags, editable }: { songId: number, initialTags: string[], allTags: string[], editable: boolean } = $props();
 
-    let tags = $state(initialTags);
+    let tags = $derived(initialTags);
     let adding = $state(false);
     let newTag = $state('');
     let error = $state<string | null>(null);

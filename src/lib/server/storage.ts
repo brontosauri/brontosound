@@ -1,5 +1,5 @@
 import fs from 'fs'
-import path, { basename, dirname } from 'path'
+import path from 'path'
 import { Readable } from 'stream';
 import { createClient, type FileStat, type WebDAVClient } from 'webdav';
 

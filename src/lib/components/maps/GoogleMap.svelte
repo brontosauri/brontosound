@@ -1,7 +1,6 @@
 <script lang="ts">
-    import { GoogleSdk } from '@beyonk/svelte-googlemaps'
     import { onMount } from "svelte";
-    import { googlePlaceToPlace } from "$lib/maps/google";
+    import { googlePlaceToPlace, loadGoogleMaps } from "$lib/maps/google";
     import type { Place } from "$lib/maps/place";
     import SelectedPlace from "./SelectedPlace.svelte";
 
@@ -22,32 +21,13 @@
     let mapMarker;
     let autocompleteInputElement;
 
-    let mounted = false;
-    let mapsready = false;
-    let mapsinit = false;
-
     $: if (mapMarker && newPlace) {mapMarker.setMap(null);} else if (mapMarker && map) {mapMarker.setMap(map)}
     $: if (newPlace && newPlace.geometry) { changeLocation(newPlace.geometry.location.lat(), newPlace.geometry.location.lng(), true) } else if (map) { resetLocation(); }
 
     onMount(async () => {
-        if (mapsready && ! mapsinit) {
-            // console.log("Onmount: init maps");
-            mapsinit = true;
-            initMaps();
-        }
-        mounted = true;
-
+        await loadGoogleMaps(token);
+        initMaps();
     });
-
-    function googlemapsReady() {
-        // console.log("GoogleMapsReady")
-        if (mounted && ! mapsinit) {
-            // console.log("GoogleMapsReady: init maps");
-            mapsinit = true;
-            initMaps();
-        }
-        mapsready = true;
-    }
 
     function initMaps() {
         //@ts-ignore
@@ -145,9 +125,6 @@
         newPlace = null;
     }
 </script>
-
-<GoogleSdk apiKey={token} on:ready={googlemapsReady} />
-
 
 <div class="mapWrapper">
     <div class="map" style="width:100%; height: 100%;" bind:this={mapComponent}></div>

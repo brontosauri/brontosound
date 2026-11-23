@@ -19,8 +19,8 @@
         onSync: () => void,
     } = $props();
 
-    let title = $state(initialTitle);
-    let artist = $state(initialArtist);
+    let title = $derived(initialTitle);
+    let artist = $derived(initialArtist);
     let editing = $state<'title' | 'artist' | null>(null); // the field to focus
     let draftTitle = $state('');
     let draftArtist = $state('');

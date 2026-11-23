@@ -28,12 +28,12 @@
 
 <div class="fixed inset-0 z-40">
     <button type="button" class="absolute inset-0 cursor-default bg-gray-900/45" aria-label="Close {label.toLowerCase()}" tabindex="-1" onclick={onClose}></button>
-    <section role="dialog" aria-label={label}
+    <div role="dialog" aria-modal="true" aria-label={label}
         class="absolute inset-x-0 bottom-0 top-10 flex flex-col overflow-y-auto rounded-t-xl bg-white px-6 pb-[calc(24px+env(safe-area-inset-bottom))]">
         <button type="button" aria-label="Close {label.toLowerCase()}" class="flex h-10 w-16 shrink-0 touch-none items-center justify-center self-center text-gray-500"
             onclick={onClose} onpointerdown={swipeStart} onpointerup={swipeEnd} onpointercancel={() => swipeFrom = null}>
             <Fa icon={faChevronDown} />
         </button>
         {@render children()}
-    </section>
+    </div>
 </div>

@@ -1,5 +1,5 @@
 import "reflect-metadata"
-import { DataSource, Repository, type DeepPartial, type EntityTarget } from "typeorm"
+import { DataSource, type Repository, type DeepPartial, type EntityTarget } from "typeorm"
 import { Song, SongFolder, SongTag } from "$lib/dbEntities/song"
 import { LiveGig, LiveGigInteraction, LiveVenue, LiveVenueLink, LiveVenueLocation } from "./dbEntities/live";
 import { HerdInvite, PasswordLink, User, UserAccount, UserCreatedEntity } from "./dbEntities/user";

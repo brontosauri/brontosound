@@ -6,18 +6,20 @@
     import { pathJoin } from '$lib/misc';
     import { can } from '$lib/permissions';
     import type { SongFile } from '$lib/songFiles/songFile';
+    import { untrack } from 'svelte';
     import SongHeader from './SongHeader.svelte';
     import { SongPageState } from './songPage.svelte';
 
     /** Header, folder, viewer, and the player at the bottom of the screen (docs/songPage.md) */
     let { data } = $props();
 
-    const song = data.song;
-    const editable = can(data.brontoSession, 'songbook.write'); // else the page only shows and plays
-    const page = new SongPageState(song.id, data.rootFiles, data.folderError, {
+    const song = $derived(data.song);
+    const editable = $derived(can(data.brontoSession, 'songbook.write')); // else the page only shows and plays
+    // One per song (+page.svelte keys it), from the first load
+    const page = untrack(() => new SongPageState(song.id, data.rootFiles, data.folderError, {
         pinnedDocument: song.pinnedDocument ?? null,
         pinnedAudio: song.pinnedAudio ?? null,
-    });
+    }));
 
     let position = $state(0); // in the player, seconds
     let activeBar = $derived(page.chartIsPlaying && page.chartSource?.kind == 'chart'

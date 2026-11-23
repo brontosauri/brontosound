@@ -6,7 +6,7 @@
     import GigPursuitColumn from './GigPursuitColumn.svelte';
 
     let { data } = $props();
-    const canMove = can(data.brontoSession, 'live.write');
+    const canMove = $derived(can(data.brontoSession, 'live.write'));
 
     /** Board columns in pipeline order; each shows the gigs in any of its statuses, and dropping a gig sets `status`. */
     const COLUMNS: { status: LiveGigStatus, alsoShows?: LiveGigStatus[], needsUs?: boolean }[] = [
@@ -17,11 +17,12 @@
     ];
     type Column = typeof COLUMNS[number];
 
-    let gigs = $state(data.pursuitGigs as LiveGig[]);
+    let gigs = $derived(data.pursuitGigs as LiveGig[]);
     let moveError = $state('');
 
     const columnStatuses = (column: Column) => [column.status, ...(column.alsoShows ?? [])];
     const gigsIn = (column: Column) => gigs.filter((gig) => columnStatuses(column).includes(gig.status));
+    const setStatus = (gigId: number, status: LiveGigStatus) => gigs = gigs.map((g) => g.id === gigId ? { ...g, status } as LiveGig : g);
 
     /** Moves the gig on the board at once, then saves; puts it back if saving fails. */
     async function moveGig(gigId: number, column: Column) {
@@ -29,12 +30,12 @@
         if (!gig || columnStatuses(column).includes(gig.status)) return;
 
         const previousStatus = gig.status;
-        gig.status = column.status;
+        setStatus(gigId, column.status);
         moveError = '';
         try {
             await saveEntityViaApi(LiveGig, { id: gigId, status: column.status }, bandApi('/live/gig'));
         } catch (error) {
-            gig.status = previousStatus;
+            setStatus(gigId, previousStatus);
             moveError = `Couldn't move ${gig.venue.name}, ${gig.name}: ${(error as Error).message}`;
         }
     }

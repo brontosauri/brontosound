@@ -33,7 +33,7 @@
         ...folderPath.split('/').filter(Boolean).map((name, i, names) => ({ name, path: names.slice(0, i + 1).join('/') })),
     ]);
 
-    let picker: HTMLInputElement;
+    let picker = $state<HTMLInputElement>();
     let dragged = $state(0); // files being dragged over the folder; 0 when none
     let depth = 0; // dragenter and dragleave fire for every child element
 
@@ -57,8 +57,8 @@
     }
 
     function picked() {
-        onUpload([...picker.files ?? []]);
-        picker.value = '';
+        onUpload([...picker!.files ?? []]);
+        picker!.value = '';
     }
 </script>
 
@@ -78,7 +78,7 @@
         <div class="flex items-center gap-3 sm:gap-4">
             <span class="text-[13px] text-gray-500">{files.length} {files.length == 1 ? 'item' : 'items'}</span>
             {#if editable}
-                <button type="button" onclick={() => picker.click()}
+                <button type="button" onclick={() => picker?.click()}
                     class="inline-flex h-10 items-center gap-2 rounded-lg border border-gray-300 bg-white px-3.5 text-sm font-medium text-gray-900 hover:bg-gray-50 focus:outline-none focus:ring-4 focus:ring-primary-300 sm:h-9">
                     <Fa icon={faUpload} size="sm" />Upload
                 </button>
