@@ -1,4 +1,4 @@
-/** The maps providers the admin can choose with `mapsProvider` in bandSettings.json (docs/maps.md). */
+/** The maps providers herd admins can choose with `mapsProvider` in herd settings (docs/maps.md). */
 export const MAPS_PROVIDERS = {
     openstreetmap: { name: 'OpenStreetMap', keySetting: null },
     mapbox: { name: 'Mapbox', keySetting: 'mapboxToken' },

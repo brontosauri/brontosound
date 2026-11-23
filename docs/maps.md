@@ -1,6 +1,6 @@
 # Maps
 
-Venue pages show a map, and search it to set the venue's location. Choose the provider with `mapsProvider` in `data/bandSettings.json`, then restart the app. Settings › Maps shows the current values.
+Venue pages show a map, and search it to set the venue's location. Herd admins choose the provider with `mapsProvider` in herd settings; Admin › Maps shows the current values.
 
 | `mapsProvider` | Map | Place search | Settings | Account |
 | --- | --- | --- | --- | --- |

@@ -1,6 +1,7 @@
 import { error } from '@sveltejs/kit';
 import type { EntityTarget, ObjectLiteral } from 'typeorm';
 import TypeOrm from '$lib/db';
+import type { Band } from '$lib/dbEntities/band';
 
 // Checks for request input, field by field. Endpoints build what they save from these, so nothing else a client
 // sends (ids of other rows, authorship, relations) reaches the database.
@@ -41,10 +42,10 @@ export function parseJson(value: unknown, field: string): Record<string, unknown
     error(400, `"${field}" must be a JSON object`);
 }
 
-/** The id of an existing row, or a 400/404 error */
-export async function existingId<T extends ObjectLiteral>(entity: EntityTarget<T>, id: unknown, what: string): Promise<number> {
+/** The id of an existing row of the band, or a 400/404 error: another band's rows don't exist */
+export async function existingId<T extends ObjectLiteral & { band: Band }>(entity: EntityTarget<T>, id: unknown, what: string, band: Band): Promise<number> {
     if (!Number.isInteger(id)) error(400, `Invalid ${what} id`);
-    const found = await (await TypeOrm.getRepository(entity)).existsBy({ id } as never);
+    const found = await (await TypeOrm.getRepository(entity)).existsBy({ id, band: { id: band.id } } as never);
     if (!found) error(404, `No such ${what}`);
     return id as number;
 }

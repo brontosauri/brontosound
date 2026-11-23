@@ -1,36 +1,20 @@
 import TypeOrm from "$lib/db";
-import { StoredDirectory, StoredFile } from "$lib/dbEntities/storage";
-import path from "path";
-import { getUserStorage, readSettings } from "./bandSettings";
+import type { Band } from "$lib/dbEntities/band";
+import { SongFolder } from "$lib/dbEntities/song";
+import { bandStorage, songsFolderOf } from "./bands";
 
-export async function syncFolder(path: string): Promise<StoredDirectory[]> {
-    // Fetch remote storage
-    const storage = await getUserStorage();
-    const result: StoredDirectory[] = await storage.listSubfolders(path);
+/** Lists the band's songs folder (creating it if missing) and keeps the listing, which the Songbook matches songs against */
+export async function syncSongsFolder(band: Band): Promise<SongFolder[]> {
+    const songsFolder = songsFolderOf(band);
+    const storage = await bandStorage(band);
+    await storage.createDirectory(songsFolder);
+    const syncDate = new Date();
+    const folders = (await storage.listFolder(songsFolder))
+        .filter(entry => entry.isFolder)
+        .map(entry => Object.assign(new SongFolder(), { name: entry.name, syncDate, band: { id: band.id } }));
 
-    // Sync cache
-    let db = await TypeOrm.getDb()
-    await db.transaction(async transactionalEntityManager => {
-        await transactionalEntityManager.delete(StoredDirectory, { parentPath: path });
-        await transactionalEntityManager.save(StoredDirectory, result);
+    return (await TypeOrm.getDb()).transaction(async manager => {
+        await manager.delete(SongFolder, { band: { id: band.id } });
+        return manager.save(folders);
     });
-
-    return result
-}
-
-export async function syncSongsFolder() {
-    const bandSettings = await readSettings();
-    await (await getUserStorage()).createDirectory(bandSettings.songsFolder);
-    return await syncFolder(bandSettings.songsFolder);
-}
-
-export async function writeTextFile(path:string, content: string) {
-    const [storage, db] = await Promise.all([
-        getUserStorage(),
-        TypeOrm.getDb()
-    ]);
-    const result: StoredFile = await storage.writeTextFile(content, path);
-    let files = db.getRepository(StoredFile)
-    files.save(result);
-    return result;
 }

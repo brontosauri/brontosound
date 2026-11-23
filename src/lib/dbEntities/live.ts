@@ -2,10 +2,14 @@ import { Entity, PrimaryGeneratedColumn, Column, OneToOne, OneToMany, ManyToOne,
 import { User, UserCreatedEntity } from "./user"
 import { Contact } from "./contacts"
 import { Location, LocationLink } from "./location"
+import { Band } from "./band"
 import type { CurrencyCode } from "$lib/currencyCodes"
 
 @Entity()
 export class LiveVenue extends UserCreatedEntity {
+    @ManyToOne(() => Band, { nullable: false, onDelete: 'CASCADE' })
+    band: Band
+
     @Column({ type: 'varchar'})
     name: string
 
@@ -40,7 +44,7 @@ export class LiveVenueLink extends LocationLink {
     @Column({ type: 'simple-enum', enum: LiveVenueLinkSource})
     source: LiveVenueLinkSource
 
-    @ManyToOne(() => LiveVenue, venue => venue.gigs)
+    @ManyToOne(() => LiveVenue, venue => venue.links, { onDelete: 'CASCADE' })
     venue: LiveVenue
 }
 
@@ -87,6 +91,10 @@ export interface MoneyAmount {
 
 @Entity()
 export class LiveGig extends UserCreatedEntity {
+    // Also its venue's: kept here so the band's gigs are found without their venues
+    @ManyToOne(() => Band, { nullable: false, onDelete: 'CASCADE' })
+    band: Band
+
     @Column({ type: 'varchar'})
     name: string
 
@@ -99,7 +107,7 @@ export class LiveGig extends UserCreatedEntity {
     @Column({ type: 'varchar', nullable: true})
     note: string
 
-    @ManyToOne(() => LiveVenue, venue => venue.gigs)
+    @ManyToOne(() => LiveVenue, venue => venue.gigs, { onDelete: 'CASCADE' })
     venue: LiveVenue
 
     @OneToMany(() => LiveGigInteraction, interaction => interaction.gig)
@@ -128,7 +136,7 @@ export class LiveGigInteraction extends UserCreatedEntity {
     @Column({ type: 'varchar', nullable: true})
     note: string
 
-    @ManyToOne(() => LiveGig, gig => gig.interactions)
+    @ManyToOne(() => LiveGig, gig => gig.interactions, { onDelete: 'CASCADE' })
     gig: LiveGig
 
     @Column({ type: 'simple-enum', enum: InteractionSender })

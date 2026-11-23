@@ -4,12 +4,13 @@ import TypeOrm from '$lib/db';
 import { InteractionSender, LiveGig, LiveGigInteraction, LiveGigStatus, LiveVenue, LiveVenueLink, LiveVenueLinkSource, type MoneyAmount } from '$lib/dbEntities/live';
 import { LocationLinkType } from '$lib/dbEntities/location';
 import type { User } from '$lib/dbEntities/user';
+import type { Band } from '$lib/dbEntities/band';
 import { PLACE_PAGE_LABELS } from '$lib/maps/place';
 import { safeUrl } from '$lib/safeUrl';
 import { date, existingId, list, oneOf, optionalText, text } from './input';
 
-// What the live endpoints save, built from the request field by field (see input.ts). Authorship is the server's;
-// a venue's location and links can only be its own.
+// What the live endpoints save, built from the request field by field (see input.ts). Authorship and band are the
+// server's; a venue's location and links can only be its own, and its gigs the band's.
 
 const LOCATION_FIELDS = ['latitude', 'longitude', 'formattedAddress', 'poiName', 'googlemapsPlaceId', 'street', 'streetNumber', 'city', 'postalCode', 'country'] as const;
 const URL_LINKS = [LocationLinkType.WEBSITE, ...Object.keys(PLACE_PAGE_LABELS)];
@@ -22,10 +23,10 @@ function authored(id: number | null, user: User) {
     return id === null ? { createdBy: author, lastModifiedBy: author } : { id, lastModifiedBy: author };
 }
 
-export async function venueInput(body: Body, user: User): Promise<DeepPartial<LiveVenue>> {
+export async function venueInput(body: Body, user: User, band: Band): Promise<DeepPartial<LiveVenue>> {
     const existing = body.id === undefined ? null
-        : await (await TypeOrm.getRepository(LiveVenue)).findOneBy({ id: await existingId(LiveVenue, body.id, 'venue') });
-    const venue: DeepPartial<LiveVenue> = authored(existing?.id ?? null, user);
+        : await (await TypeOrm.getRepository(LiveVenue)).findOneBy({ id: await existingId(LiveVenue, body.id, 'venue', band) });
+    const venue: DeepPartial<LiveVenue> = { ...authored(existing?.id ?? null, user), band: { id: band.id } };
 
     if ('name' in body) venue.name = text(body.name, 'name');
     if ('note' in body) venue.note = text(body.note, 'note');
@@ -58,9 +59,9 @@ function linkInput(body: Body, ownLinkIds: Set<number>, user: User): DeepPartial
 }
 
 /** A gig to create or update; `create` ignores any id */
-export async function gigInput(body: Body, user: User, { create = false } = {}): Promise<DeepPartial<LiveGig>> {
-    const id = !create && body.id !== undefined ? await existingId(LiveGig, body.id, 'gig') : null;
-    const gig: DeepPartial<LiveGig> = authored(id, user);
+export async function gigInput(body: Body, user: User, band: Band, { create = false } = {}): Promise<DeepPartial<LiveGig>> {
+    const id = !create && body.id !== undefined ? await existingId(LiveGig, body.id, 'gig', band) : null;
+    const gig: DeepPartial<LiveGig> = { ...authored(id, user), band: { id: band.id } };
 
     if ('name' in body) gig.name = text(body.name, 'name');
     if ('status' in body) gig.status = oneOf(body.status, LiveGigStatus, 'status');
@@ -69,18 +70,18 @@ export async function gigInput(body: Body, user: User, { create = false } = {}):
     for (const field of ['proposedCachet', 'agreedCachet', 'ReceivedCachet'] as const) {
         if (field in body) gig[field] = money(body[field], field);
     }
-    if ('venue' in body) gig.venue = { id: await existingId(LiveVenue, body.venue?.id, 'venue') };
+    if ('venue' in body) gig.venue = { id: await existingId(LiveVenue, body.venue?.id, 'venue', band) };
     if (id === null && !(gig.name && gig.status && gig.date && gig.venue)) error(400, 'A gig needs a name, status, date and venue');
     return gig;
 }
 
-export async function interactionInput(body: Body, user: User): Promise<DeepPartial<LiveGigInteraction>> {
+export async function interactionInput(body: Body, user: User, band: Band): Promise<DeepPartial<LiveGigInteraction>> {
     return {
         ...authored(null, user),
         date: date(body.date, 'date'),
         note: optionalText(body.note, 'note') as string,
         from: oneOf(body.from, InteractionSender, 'from'),
-        gig: { id: await existingId(LiveGig, body.gig?.id, 'gig') },
+        gig: { id: await existingId(LiveGig, body.gig?.id, 'gig', band) },
     };
 }
 

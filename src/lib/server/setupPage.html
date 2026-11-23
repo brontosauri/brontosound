@@ -35,13 +35,13 @@
 	<header><img src="/bronto.png" alt="" />Brontosound</header>
 	<main>
 		<h1>Set up Brontosound</h1>
-		<p>Brontosound needs a <code>.env</code> file with the secret that signs people in, and a <code>data/</code> folder for your
-			band's settings, database and files. To create what's missing, run this in the Brontosound folder:</p>
+		<p>Brontosound needs a <code>config/</code> folder with the secret that signs people in, and a <code>data/</code> folder for your
+			bands' database and files. To create what's missing, run this in the Brontosound folder:</p>
 		<pre><code>npm run init</code></pre>
-		<p>It asks for your band's name and a password for the <code>admin</code> user. Then reload this page and sign in as <code>admin</code>.</p>
+		<p>It asks for a password for the <code>admin</code> user, the herd's first admin. Then reload this page and sign in as <code>admin</code>.</p>
 		<a class="button" href="">Reload this page</a>
 		<p class="caption">With Docker, run it in your Brontosound checkout, then pass what it creates:
-			<code>--env-file .env -v ./data:/app/data</code>.</p>
+			<code>-v ./config:/app/config -v ./data:/app/data</code>.</p>
 	</main>
 </body>
 </html>

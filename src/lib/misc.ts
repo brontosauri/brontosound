@@ -18,11 +18,21 @@ export function pathJoin(...pathComponents){
     return pathComponents.join(separator).replace(replace, separator);
  }
 
-export function buildVenueUrl(venue: LiveVenue): string {
-    const slug = slugify(venue.name, { lower: true });
-    return `/app/live/venues/${venue.id}/${slug}`;
+/** A band's pages: `/@<handle>/app…` */
+export function bandAppUrl(handle: string, path = ''): string {
+    return `/@${handle}/app${path}`;
 }
 
-export function buildGigUrl(gig: LiveGig, venue: LiveVenue): string {
-    return `/app/live/venues/${venue.id}/${slugify(venue.name)}/gig/${gig.id}/${slugify(gig.name)}`;
+/** A band's API: `/@<handle>/api…` */
+export function bandApiUrl(handle: string, path: string): string {
+    return `/@${handle}/api${path}`;
+}
+
+export function buildVenueUrl(handle: string, venue: LiveVenue): string {
+    const slug = slugify(venue.name, { lower: true });
+    return bandAppUrl(handle, `/live/venues/${venue.id}/${slug}`);
+}
+
+export function buildGigUrl(handle: string, gig: LiveGig, venue: LiveVenue): string {
+    return bandAppUrl(handle, `/live/venues/${venue.id}/${slugify(venue.name)}/gig/${gig.id}/${slugify(gig.name)}`);
 }

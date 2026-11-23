@@ -1,125 +1,115 @@
-import { promises as fs } from 'fs';
-import { readFileSync } from 'fs';
+import { error } from '@sveltejs/kit';
+import TypeOrm from '$lib/db';
+import { Band, BandStorage } from '$lib/dbEntities/band';
+import { Visibility } from '$lib/dbEntities/user';
+import { pathJoin } from '$lib/misc';
+import { forgetStorageUsed } from './quotas';
+import { herdSettings } from './herdSettings';
+import { oneOf, text } from './input';
+import { checkServerAddress } from './publicAddress';
+import { savePicture } from './pictures';
+import { FileNotFoundError, isFolderName, WebdavStorage } from './storage';
 
-import { filesRoot, localDataRoot, settingsFilename } from "$lib/server/config";
-import { WebdavStorage, FilesystemStorage, type PersistedStorage } from './storage';
-import type { Soundfont } from '$lib/soundfonts';
-import { MAPS_PROVIDERS, type MapsConfig, type MapsProviderId } from '$lib/maps/providers';
+// What owners change of their band (Band › Settings): its name, and where its songs are
 
-export interface SettingsData {
-    bandName: string;
-    bandLogo?: string;
-    locale?: string;
-    authorizedGoogleSSOUsers: string[];
-    adminPasswordHash?: string; // required, checked at startup; generate with `npm run hash-password`
-    adminPasswordSignIn: boolean; // false: the built-in admin can't sign in (once other admins exist)
-    songsFolder?: string;
-    webdavEnabled: boolean;
+export async function renameBand(band: Band, name: unknown): Promise<void> {
+    const newName = text(name, 'name').trim();
+    if (!newName || newName.length > 100) error(400, 'The band needs a name, up to 100 characters');
+    await (await TypeOrm.getRepository(Band)).update(band.id, { name: newName });
+}
+
+/** What the herd and the web see at /@handle, from the profile form, field by field */
+export async function saveBandProfile(band: Band, form: FormData): Promise<void> {
+    const field = (name: string, max = 100) => {
+        const value = text(form.get(name) ?? '', name).trim();
+        if (value.length > max) error(400, `"${name}" can be ${max} characters at most`);
+        return value;
+    };
+    const publicEmail = field('publicEmail');
+    if (publicEmail && !/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(publicEmail)) error(400, `Not an email address: ${publicEmail}`);
+    const links = field('links', 2000).split('\n').map(link => link.trim()).filter(Boolean).slice(0, 10);
+    const notLink = links.find(link => !/^https?:\/\/[^/]/i.test(link));
+    if (notLink) error(400, `Links start with https://: ${notLink}`);
+    await (await TypeOrm.getRepository(Band)).update(band.id, {
+        visibility: oneOf(form.get('visibility'), Visibility, 'visibility'),
+        about: field('about', 2000), genres: field('genres'), city: field('city'), publicEmail, links,
+        showGigs: form.has('showGigs'), showMembers: form.has('showMembers'),
+    });
+}
+
+/** A dark logo on a transparent background: the header shows it white */
+export async function saveLogo(band: Band, file: unknown): Promise<void> {
+    const logo = await savePicture(file, band.logo);
+    await (await TypeOrm.getRepository(Band)).update(band.id, { logo });
+}
+
+interface WebdavSettings {
     webdavServer: string;
     webdavUsername: string;
     webdavPassword: string;
-    webdavConcurrentConnections: number;
-    ytInvidiousEnabled: boolean;
-    ytInvidiousServer: string,
-    mapsProvider: MapsProviderId; // docs/maps.md
-    mapboxToken?: string;
-    hereApiKey?: string;
-    googlemapsToken?: string;
-    osmTileServer: string;
-    osmNominatimServer?: string; // no default: check the public server's usage policy first (docs/maps.md)
-    soundfonts: Soundfont[]; // MIDI.js soundfonts by URL, besides those in data/soundfonts (docs/songPage.md)
-    defaultSoundfont?: string; // by name
-    backlineStunServers: string[]; // tell Backline and the browsers on /backline their public addresses (docs/backline.md)
-    backlineMaxGuests: number; // browsers let in by PIN at once; band members don't count
-    breachedPasswordCheck: boolean; // refuse new passwords found in data breaches (Have I Been Pwned; docs/authentication.md)
+    webdavSongsFolder: string;
 }
 
-export const defaultSettings: SettingsData = {
-    bandName: "My Band",
-    locale: "it-IT",
-    authorizedGoogleSSOUsers: [],
-    songsFolder: "Songs",
-    webdavEnabled: false,
-    webdavServer: "",
-    webdavUsername: "",
-    webdavPassword: "",
-    webdavConcurrentConnections: 5,
-    ytInvidiousEnabled: true,
-    ytInvidiousServer: "https://yewtu.be/",
-    mapsProvider: "openstreetmap",
-    osmTileServer: "https://tile.openstreetmap.org/{z}/{x}/{y}.png",
-    soundfonts: [],
-    backlineStunServers: ["stun:stun.l.google.com:19302"],
-    backlineMaxGuests: 50,
-    breachedPasswordCheck: true,
-    adminPasswordSignIn: true,
-}
-
-let cachedSettings: SettingsData | null = null;
-
-export function readSettings(): SettingsData {
-    if (cachedSettings) {
-        return cachedSettings;
-    }
-
-    const filePath = `${localDataRoot}/${settingsFilename}`;
-    try {
-        const data = readFileSync(filePath, 'utf-8');
-        const userSettings = JSON.parse(data) as SettingsData;
-        cachedSettings = {...defaultSettings, ...userSettings};
-        return cachedSettings;
-    } catch (error) {
-        console.error(`Error reading settings from ${filePath}:`, error);
-        throw error;
-    }
-}
-
-export async function writeSettings(settingsData: SettingsData): Promise<void> {
-    const filePath = `${localDataRoot}/${settingsFilename}`;
-    try {
-        const data = JSON.stringify(settingsData, null, 2);
-        await fs.writeFile(filePath, data, 'utf-8');
-        cachedSettings = settingsData; // Update the cache
-    } catch (error) {
-        console.error(`Error writing settings to ${filePath}:`, error);
-        throw error;
-    }
-}
-
-/** The band's file storage. Paths start with the songs folder, and can't leave it. */
-export async function getUserStorage(): Promise<PersistedStorage> {
-    const settings = readSettings();
-    if (settings.webdavEnabled) {
-        return new WebdavStorage(
-            settings.webdavServer,
-            settings.webdavUsername,
-            settings.webdavPassword,
-            settings.songsFolder!,
-            settings.webdavConcurrentConnections
-        );
-    } else {
-        return new FilesystemStorage(filesRoot, settings.songsFolder!);
-    }
-}
-
-export function safeBandSettings() {
-    const bandSettings = readSettings();
+/** The WebDAV settings an owner sent, checked; a password left blank is the saved one */
+async function webdavFromForm(band: Band, form: FormData): Promise<WebdavSettings> {
+    const webdavServer = text(form.get('webdavServer') ?? '', 'server').trim();
+    const webdavSongsFolder = text(form.get('webdavSongsFolder') ?? '', 'songs folder').trim().replace(/^\/+|\/+$/g, '');
+    if (!webdavSongsFolder.split('/').every(isFolderName)) error(400, 'The songs folder is a path of folder names, like "Band/Songs"');
+    await checkServerAddress(webdavServer, herdSettings().webdavLocalServers);
+    const typed = text(form.get('webdavPassword') ?? '', 'password');
     return {
-        locale: bandSettings.locale,
-        maps: mapsConfig(bandSettings),
-    }
-}
-
-/** The selected maps provider, with only its own browser key */
-function mapsConfig(settings: SettingsData): MapsConfig {
-    const provider = MAPS_PROVIDERS[settings.mapsProvider];
-    if (!provider) {
-        throw new Error(`${settingsFilename}: "mapsProvider" must be one of: ${Object.keys(MAPS_PROVIDERS).join(", ")}`);
-    }
-    return {
-        provider: settings.mapsProvider,
-        key: provider.keySetting ? settings[provider.keySetting] : undefined,
-        tileServer: settings.osmTileServer,
-        nominatimServer: settings.osmNominatimServer,
+        webdavServer, webdavSongsFolder,
+        webdavUsername: text(form.get('webdavUsername') ?? '', 'username').trim(),
+        webdavPassword: typed || await savedPassword(band),
     };
+}
+
+async function savedPassword(band: Band): Promise<string> {
+    const saved = await (await TypeOrm.getRepository(Band)).createQueryBuilder('band')
+        .addSelect('band.webdavPassword').where('band.id = :id', { id: band.id }).getOneOrFail();
+    return saved.webdavPassword ?? '';
+}
+
+/** Moves the band's songs to herd storage or its own WebDAV. Files aren't moved: owners copy them first */
+export async function saveBandStorage(band: Band, form: FormData): Promise<void> {
+    const storage = oneOf(form.get('storage'), BandStorage, 'storage');
+    if (storage == BandStorage.WEBDAV && band.storage != BandStorage.WEBDAV && !herdSettings().webdavAllowed) {
+        error(403, "This herd's admins haven't enabled WebDAV for bands");
+    }
+    const changes = storage == BandStorage.WEBDAV ? await webdavFromForm(band, form) : {};
+    await (await TypeOrm.getRepository(Band)).update(band.id, { storage, ...changes });
+    forgetStorageUsed(band);
+}
+
+export interface StorageTest {
+    read: string | null; // what went wrong, or null
+    write: string | null;
+}
+
+const TEST_FILE = 'brontosound-connection-test.tmp';
+
+/** Lists the songs folder of the WebDAV server in the form, then writes and deletes a file in it */
+export async function testWebdav(band: Band, form: FormData): Promise<StorageTest> {
+    const settings = await webdavFromForm(band, form);
+    const storage = new WebdavStorage(settings.webdavServer, settings.webdavUsername, settings.webdavPassword,
+        settings.webdavSongsFolder, herdSettings().webdavConcurrentConnections);
+    const attempt = async (check: () => Promise<unknown>) => check().then(() => null, problemOf);
+    return {
+        read: await attempt(() => storage.listFolder(settings.webdavSongsFolder)),
+        write: await attempt(async () => {
+            const file = pathJoin(settings.webdavSongsFolder, TEST_FILE);
+            await storage.writeTextFile('Temporary file created by Brontosound to test the connection. Safe to delete.', file);
+            await storage.deleteFile(file);
+        }),
+    };
+}
+
+/** What went wrong, for the owner: never the server's own reply, which may come from anywhere the address points */
+function problemOf(e: unknown): string {
+    if (e instanceof FileNotFoundError) return "There's no such songs folder on the server";
+    const status = String((e as Error)?.message).match(/\b(401|403|404|405|507)\b/)?.[1];
+    return status == '401' || status == '403' ? 'The server refused the username or password'
+        : status == '404' ? "There's no such folder on the server"
+        : status == '507' ? 'The server is full'
+        : "Couldn't reach a WebDAV server at this address";
 }

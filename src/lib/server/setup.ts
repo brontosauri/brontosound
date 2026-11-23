@@ -1,17 +1,14 @@
-import { existsSync } from 'fs';
-import { env } from '$env/dynamic/private';
-import { settingsPath } from '$lib/server/config';
+import { isConfigured, instanceConfig } from '$lib/server/instanceConfig';
 import { checkAuthSecret } from '$lib/server/authSecret';
-import { readSettings } from '$lib/server/bandSettings';
-import { moveSongsFolderToFiles } from '$lib/server/filesFolder';
+import { loadHerdSettings } from '$lib/server/herdSettings';
 import { ensureDefaultAdmin } from '$lib/server/users';
 import setupPageHtml from './setupPage.html?raw';
 
 let started: Promise<void> | null = null;
 
-/** Whether `npm run init` has set up AUTH_SECRET and the data folder. The first time it has, readies the app. */
+/** Whether `npm run init` has created config/config.json and the data folder. The first time it has, readies the app. */
 export async function isSetUp(): Promise<boolean> {
-    if (!started && env.AUTH_SECRET && existsSync(settingsPath)) {
+    if (!started && isConfigured()) {
         started = start();
     }
     await started;
@@ -19,9 +16,8 @@ export async function isSetUp(): Promise<boolean> {
 }
 
 async function start(): Promise<void> {
-    checkAuthSecret(env.AUTH_SECRET);
-    const { songsFolder, webdavEnabled } = readSettings();
-    moveSongsFolderToFiles(songsFolder ?? '', !webdavEnabled);
+    checkAuthSecret(instanceConfig().authSecret);
+    await loadHerdSettings();
     await ensureDefaultAdmin();
 }
 

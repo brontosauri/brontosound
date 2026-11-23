@@ -1,18 +1,24 @@
 import { BeforeInsert, Column, Entity, ManyToOne, OneToMany, PrimaryGeneratedColumn, Unique } from "typeorm";
 import { Exclude } from "class-transformer";
+import type { QuotaOverrides } from "$lib/quotas";
 
-export enum UserRole {
-    VIEWER = 'viewer',
-    EDITOR = 'editor',
-    ADMIN = 'admin',
+// A role in the herd, the whole instance. Roles in a band are on its Membership
+export enum HerdRole {
+    ADMIN = 'admin', // herd settings, users and bands' metadata: never a band's content
+    USER = 'user',
 }
 
-// Checked with `requirePermission()` by every endpoint and action that changes data
-export const permissionsFromRole = {
-    [UserRole.VIEWER]: ['songbook.read', 'live.read', 'contacts.read', 'bandSettings.read'],
-    [UserRole.EDITOR]: ['songbook.read', 'live.read', 'contacts.read', 'songbook.write', 'live.write', 'contacts.write', 'bandSettings.read'],
-    [UserRole.ADMIN]: ['songbook.read', 'live.read', 'contacts.read', 'songbook.write', 'live.write', 'contacts.write', 'bandSettings.read', 'bandSettings.write', 'users.manage'],
+/** Who sees a public profile, a person's or a band's, at `/@handle` */
+export enum Visibility {
+    PUBLIC = 'public', // anyone with the link
+    HIDDEN = 'hidden', // its bands' members only
 }
+
+// Checked with `requirePermission()`; inside a band, the band role's are added (see permissionsFromBandRole)
+export const permissionsFromHerdRole: Record<HerdRole, string[]> = {
+    [HerdRole.ADMIN]: ['herd.admin'],
+    [HerdRole.USER]: [],
+};
 
 
 @Entity()
@@ -20,26 +26,75 @@ export class User {
     @PrimaryGeneratedColumn()
     id: number;
 
+    // Internal and fixed: their email, `admin` for the built-in admin, or random for people without email
     @Column({ type: 'varchar', unique: true })
     username: string;
 
+    // Their address, `/@handle`, shared with bands' handles (see handles.ts). Null until they pick one
+    @Column({ type: 'varchar', unique: true, nullable: true })
+    handle: string | null;
+
     @Column({ type: 'varchar' })
     name: string;
+
+    // Their public profile (/@handle)
+    @Column({ type: 'varchar', default: '' })
+    about: string;
+
+    @Column({ type: 'varchar', default: '' })
+    instruments: string;
+
+    @Column({ type: 'varchar', default: '' })
+    city: string;
+
+    @Column({ type: 'varchar', default: '' })
+    website: string;
+
+    @Column({ type: 'simple-enum', enum: Visibility, default: Visibility.HIDDEN })
+    visibility: Visibility;
+
+    // Their bands on their profile, and them among each band's members
+    @Column({ type: 'boolean', default: true })
+    showBands: boolean;
+
+    // Their language and date format; null: the herd's
+    @Column({ type: 'varchar', nullable: true })
+    locale: string | null;
+
+    // A URL (/pictures/<id>); null: their initials
+    @Column({ type: 'varchar', nullable: true })
+    avatar: string | null;
 
     @Exclude()
     @Column({ type: 'varchar', nullable: true, select: false })
     passwordHash: string | null;
 
-    // Null only for the default admin
+    // Null for the default admin, and people who joined with an admin's invite link
     @Column({ type: 'varchar', unique: true, nullable: true })
     email: string | null;
 
-    @Column({ type: 'simple-enum', enum: UserRole })
-    role: UserRole;
+    @Column({ type: 'simple-enum', enum: HerdRole, default: HerdRole.USER })
+    herdRole: HerdRole;
+
+    @Column({ type: 'datetime', default: () => 'CURRENT_TIMESTAMP' })
+    creationDate: Date;
 
     // Set when an admin removes the user: the row is kept so authored content keeps its attribution
     @Column({ type: 'datetime', nullable: true })
     removedDate?: Date | null;
+
+    // Signed up while the herd asks new accounts to confirm their email, and hasn't yet: can't sign in until then
+    @Column({ type: 'boolean', default: false })
+    unconfirmedEmail: boolean;
+
+    // Set while a herd admin suspends the user: they can't sign in, and their bands keep working
+    @Column({ type: 'datetime', nullable: true })
+    suspendedDate?: Date | null;
+
+    // Herd admins' exceptions to the herd's quotas ($lib/quotas.ts), with their reasons: not for the browser
+    @Exclude()
+    @Column({ type: 'simple-json', default: '{}' })
+    quotaOverrides: QuotaOverrides;
 
     // Sessions carry the value they were issued with; bumping it signs the user out everywhere
     @Column({ type: 'integer', default: 0 })
@@ -90,6 +145,31 @@ export class UserAccount {
     linkedDate?: Date;
 }
 
+export enum LinkPurpose {
+    PASSWORD = 'password', // set their password: users an admin added, or who forgot it
+    CONFIRM = 'confirm',   // confirm their email, after signing up
+}
+
+// A link sent to a user, working once (passwordLinks.ts)
+@Entity()
+export class PasswordLink {
+    @PrimaryGeneratedColumn()
+    id: number;
+
+    @Column({ type: 'simple-enum', enum: LinkPurpose, default: LinkPurpose.PASSWORD })
+    purpose: LinkPurpose;
+
+    @ManyToOne(() => User, { nullable: false, onDelete: 'CASCADE' })
+    user: User;
+
+    @Exclude()
+    @Column({ type: 'varchar', unique: true, select: false })
+    tokenHash: string;
+
+    @Column({ type: 'datetime' })
+    expiresDate: Date;
+}
+
 export abstract class UserCreatedEntity {
     @PrimaryGeneratedColumn()
     id: number
@@ -110,4 +190,35 @@ export abstract class UserCreatedEntity {
             this.createdBy = this.lastModifiedBy;
         }
     }
+}
+
+// An invite into the herd from its admins (herdInvites.ts), working once: emailed, or a link they pass on
+@Entity()
+export class HerdInvite {
+    @PrimaryGeneratedColumn()
+    id: number;
+
+    // Where it's emailed: their account's email. Null for a link: whoever opens it may be anyone, so no email
+    @Column({ type: 'varchar', nullable: true })
+    email: string | null;
+
+    @Column({ type: 'simple-enum', enum: HerdRole, default: HerdRole.USER })
+    herdRole: HerdRole;
+
+    @Exclude()
+    @Column({ type: 'varchar', unique: true, select: false })
+    tokenHash: string;
+
+    // Emailing it failed the last time: admins see it, and send it again
+    @Column({ type: 'boolean', default: false })
+    notSent: boolean;
+
+    @ManyToOne(() => User, { nullable: true, onDelete: 'SET NULL' })
+    createdBy: User | null;
+
+    @Column({ type: 'datetime', default: () => 'CURRENT_TIMESTAMP' })
+    creationDate: Date;
+
+    @Column({ type: 'datetime' })
+    expiresDate: Date;
 }

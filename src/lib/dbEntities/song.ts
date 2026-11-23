@@ -1,11 +1,14 @@
-import path from "path"
-import { Entity, PrimaryGeneratedColumn, Column } from "typeorm"
+import { Entity, PrimaryGeneratedColumn, Column, ManyToOne, Unique } from "typeorm"
 import { ManyToMany, JoinTable } from "typeorm"
+import { Band } from "./band"
 
 @Entity()
 export class Song {
     @PrimaryGeneratedColumn()
     id: number
+
+    @ManyToOne(() => Band, { nullable: false, onDelete: 'CASCADE' })
+    band: Band
 
     @Column({ type: 'varchar'})
     artist: string
@@ -34,10 +37,30 @@ export class Song {
     pinnedAudio: string | null
 }
 
+// A folder of the songs folder, as last listed: the Songbook matches songs to these by name
 @Entity()
+export class SongFolder {
+    @PrimaryGeneratedColumn()
+    id: number
+
+    @ManyToOne(() => Band, { nullable: false, onDelete: 'CASCADE' })
+    band: Band
+
+    @Column({type: 'varchar'})
+    name: string
+
+    @Column({type: 'datetime'})
+    syncDate: Date
+}
+
+@Entity()
+@Unique(['band', 'name'])
 export class SongTag {
     @PrimaryGeneratedColumn()
     id: number
+
+    @ManyToOne(() => Band, { nullable: false, onDelete: 'CASCADE' })
+    band: Band
 
     @Column({type: 'varchar'})
     name: string

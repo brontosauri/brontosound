@@ -1,11 +1,14 @@
 import "reflect-metadata"
 import { DataSource, Repository, type DeepPartial, type EntityTarget } from "typeorm"
-import { Song, SongTag } from "$lib/dbEntities/song"
-import { StoredDirectory, StoredFile, StoredObject } from "./dbEntities/storage";
+import { Song, SongFolder, SongTag } from "$lib/dbEntities/song"
 import { LiveGig, LiveGigInteraction, LiveVenue, LiveVenueLink, LiveVenueLocation } from "./dbEntities/live";
-import { User, UserAccount, UserCreatedEntity } from "./dbEntities/user";
+import { HerdInvite, PasswordLink, User, UserAccount, UserCreatedEntity } from "./dbEntities/user";
 import { Contact } from "./dbEntities/contacts";
 import { BacklineLink } from "./dbEntities/backline";
+import { Band, Invite, InviteLink, Membership } from "./dbEntities/band";
+import { HerdSettings } from "./dbEntities/herd";
+import { Picture } from "./dbEntities/picture";
+import { ProfileReport } from "./dbEntities/report";
 import { instanceToPlain, plainToClass, type ClassConstructor } from "class-transformer";
 
 class TypeOrm {
@@ -21,13 +24,20 @@ class TypeOrm {
           type: "better-sqlite3",
           database: "data/database/database.sqlite", // TODO: use a config file
           entities: [
+            HerdSettings,
+            Picture,
+            ProfileReport,
             User,
             UserAccount,
+            PasswordLink,
+            HerdInvite,
+            Band,
+            Membership,
+            Invite,
+            InviteLink,
             Song,
             SongTag,
-            StoredObject,
-            StoredDirectory,
-            StoredFile,
+            SongFolder,
             Contact,
             LiveVenue,
             LiveVenueLocation,
@@ -43,10 +53,6 @@ class TypeOrm {
         .then((fulfilled) => {
           console.info('Data Source has been initialized!');
           return fulfilled;
-        })
-        .catch((err) => {
-          console.error('Error during Data Source initialization', err);
-          return null;
         });
     }
     return TypeOrm.instance;

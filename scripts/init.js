@@ -1,41 +1,40 @@
-// Sets up a new Brontosound: .env with a generated AUTH_SECRET, then the data folder (band settings with the admin
-// password, empty database and songs folders). Leaves what already exists alone.
+// Sets up a new Brontosound herd: config/config.json (from config/config.template.json, with a generated authSecret and the admin password), then the data
+// folder (empty database and files folders). Leaves what already exists alone.
 //   npm run init
 import { existsSync } from 'node:fs';
 import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { randomBytes } from 'node:crypto';
-import { filesRoot, localDataRoot, settingsPath } from '../src/lib/server/config.ts';
+import { configPath, configRoot, filesRoot, localDataRoot } from '../src/lib/server/config.ts';
 import { hashPassword } from '../src/lib/server/password.ts';
-import { ask, askNewPassword, closePrompt } from './prompt.js';
+import { askNewPassword, closePrompt } from './prompt.js';
 
-const envPath = '.env';
-const songsFolder = 'Songs';
-
-async function createEnv() {
-	const template = await readFile('.env.template', 'utf-8');
-	const secret = randomBytes(32).toString('base64');
-	await writeFile(envPath, template.replace(/^AUTH_SECRET=.*$/m, `AUTH_SECRET=${secret}`), { flag: 'wx' });
-	console.error(`Created ${envPath} with a new AUTH_SECRET. For Google sign-in, set AUTH_GOOGLE_ID and AUTH_GOOGLE_SECRET there.`);
-}
-
-async function createDataFolder() {
-	console.error(`Setting up ${localDataRoot}/ for your band.\n`);
-	const bandName = (await ask('Band name: ')).trim() || 'My Band';
+async function createConfig() {
+	console.error(`Setting up ${configRoot}/ for your herd.\n`);
 	console.error('Choose a password for the "admin" user.');
 	const password = await askNewPassword();
 
-	await mkdir(`${localDataRoot}/database`, { recursive: true });
-	await mkdir(`${filesRoot}/${songsFolder}`, { recursive: true });
-	const settings = { bandName, songsFolder, adminPasswordHash: await hashPassword(password) };
-	await writeFile(settingsPath, JSON.stringify(settings, null, 2) + '\n', { flag: 'wx' });
-	console.error(`\nCreated ${settingsPath}. Your songs go in ${filesRoot}/${songsFolder}/.`);
+	await mkdir(configRoot, { recursive: true });
+	const template = JSON.parse(await readFile(configRoot + '/config.template.json', 'utf-8'));
+	const config = {
+		...template,
+		adminPasswordHash: await hashPassword(password),
+		authSecret: randomBytes(32).toString('base64'),
+	};
+	await writeFile(configPath, JSON.stringify(config, null, 2) + '\n', { flag: 'wx', mode: 0o600 });
+	console.error(`\nCreated ${configPath}. For Google sign-in, set googleClientId and googleClientSecret there.`);
 }
 
-const needsEnv = !existsSync(envPath), needsDataFolder = !existsSync(settingsPath);
-if (needsEnv) await createEnv();
+async function createDataFolder() {
+	await mkdir(`${localDataRoot}/database`, { recursive: true });
+	await mkdir(filesRoot, { recursive: true });
+	console.error(`Created ${localDataRoot}/. Bands' songs go in ${filesRoot}/.`);
+}
+
+const needsConfig = !existsSync(configPath), needsDataFolder = !existsSync(localDataRoot);
+if (needsConfig) await createConfig();
 if (needsDataFolder) await createDataFolder();
 closePrompt();
 
-console.error(needsEnv || needsDataFolder
-	? `\nStart Brontosound (or reload its page) and sign in as "admin". The app's Settings page lists what else ${settingsPath} can set.`
-	: `${envPath} and ${settingsPath} exist: Brontosound is set up.`);
+console.error(needsConfig || needsDataFolder
+	? `\nStart Brontosound (or reload its page) and sign in as "admin": herd settings are in the app.`
+	: `${configPath} and ${localDataRoot}/ exist: Brontosound is set up.`);

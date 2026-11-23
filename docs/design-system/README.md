@@ -50,6 +50,7 @@ The app is built with SvelteKit, Tailwind and Flowbite. The orange scale is Tail
 - Disabled: don't fade a button. Replace it with a "Coming soon" tag and a line saying why.
 - Focus: Flowbite defaults. Buttons get a 4px `primary-300` ring; inputs get a `primary-500` border and ring. The button ring is under 3:1 on white, so a stronger ring (`primary-700`) is a known open item.
 - Deleted or archived rows: `ink-muted` text. Their action buttons stay at full strength.
+- Saving: settings come in cards (`SettingsCard`), each with its own Save button (`SaveForm`). What happened shows beside the button ("Saved", "Not saved: …"), never in a banner at the top of the page.
 
 **Imagery.** None inside the app. The only images are the band logo in the header and the Brontosound mark in the footer.
 
@@ -67,7 +68,7 @@ The app is built with SvelteKit, Tailwind and Flowbite. The orange scale is Tail
 
 ## Logos
 
-- **The band's own logo** goes in the header, at 36px, inverted to white on `header`. It comes from `bandSettings.json` (`bandLogo`).
+- **The band's own logo** goes in the header, at 36px, inverted to white on `header`. It comes from `Band.logo`; outside a band, the header shows the herd's name and the mark.
 - **The Brontosound mark** (`static/bronto.png`) is the default band logo. It also appears in "Powered by Brontosound" at 20px and 60% opacity, in the app footer and on the public site.
 
 ## Components

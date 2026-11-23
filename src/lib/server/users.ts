@@ -3,17 +3,15 @@ import { error } from '@sveltejs/kit';
 import { getRequestEvent } from '$app/server';
 import { IsNull, Not, QueryFailedError } from 'typeorm';
 import TypeOrm from '$lib/db';
-import { User, UserAccount, UserRole } from '$lib/dbEntities/user';
-import { readSettings } from '$lib/server/bandSettings';
+import { HerdRole, User, UserAccount } from '$lib/dbEntities/user';
+import { herdSettings } from '$lib/server/herdSettings';
+import { instanceConfig } from '$lib/server/instanceConfig';
 import { hashPassword, isPasswordHash, MAX_PASSWORD_LENGTH, PasswordCheckBusy, passwordProblem, verifyPassword } from '$lib/server/password';
-import { localDataRoot, settingsFilename } from '$lib/server/config';
-import { removeLinksOf } from '$lib/server/backline/links';
+import { DEFAULT_ADMIN_USERNAME, configPath } from '$lib/server/config';
 import { addressBlocked, loginWait, recordFailure, recordSuccess } from '$lib/server/loginThrottle';
 import { breachCount } from '$lib/server/breachedPasswords';
 import { useTwoStepCode } from '$lib/server/twoStep';
 
-// Built-in admin, whose password hash lives in band settings (`adminPasswordHash`)
-export const DEFAULT_ADMIN_USERNAME = 'admin';
 
 export class TooManyLoginAttempts extends CredentialsSignin {
     code = 'too_many_attempts';
@@ -33,6 +31,11 @@ export class TwoStepInvalid extends CredentialsSignin {
     code = 'two_step_invalid';
 }
 
+// The password was right, but the account's email isn't confirmed yet (herd setting `confirmEmails`)
+export class EmailUnconfirmed extends CredentialsSignin {
+    code = 'unconfirmed';
+}
+
 // Too many sign-ins at once (see MAX_QUEUED_SCRYPT): nothing was checked
 export class SignInBusy extends CredentialsSignin {
     code = 'busy';
@@ -42,37 +45,40 @@ export function normalizeEmail(email: string): string {
     return email.trim().toLowerCase();
 }
 
-// Emails listed in band settings' `authorizedGoogleSSOUsers` are made admin on Google sign-in (see docs/authentication.md)
-export function isBootstrapAdmin(email: string): boolean {
-    return readSettings().authorizedGoogleSSOUsers.some(e => normalizeEmail(e) === normalizeEmail(email));
+// The built-in admin is configured in config/config.json, so it can't be removed or suspended from the UI
+export function isBuiltInAdmin(user: User): boolean {
+    return user.username === DEFAULT_ADMIN_USERNAME;
 }
 
-// Users whose access is configured in band settings, so they can't be removed from the UI
-function isManagedBySettings(user: User): boolean {
-    return user.username === DEFAULT_ADMIN_USERNAME || (!!user.email && isBootstrapAdmin(user.email));
-}
-
-function isUniqueViolation(e: unknown): boolean {
+export function isUniqueViolation(e: unknown): boolean {
     return e instanceof QueryFailedError && e.message.includes('UNIQUE constraint failed');
 }
 
-async function findUserByLogin(login: string, withPasswordHash = false): Promise<User | null> {
+/** The user who signs in as `login`: their email, their handle (with or without @), or `admin` */
+/** What the user signs in with, as shown to them */
+export function loginOf(user: User): string {
+    return user.email ?? (user.handle ? `@${user.handle}` : user.username);
+}
+
+export async function findUserByLogin(login: string, withPasswordHash = false): Promise<User | null> {
+    login = normalizeEmail(login);
     const query = (await TypeOrm.getRepository(User)).createQueryBuilder('user')
-        .where('(LOWER(user.email) = :login OR LOWER(user.username) = :login)', { login: normalizeEmail(login) });
+        .where('(LOWER(user.email) = :login OR LOWER(user.username) = :login OR user.handle = :handle)', { login, handle: login.replace(/^@/, '') });
     if (withPasswordHash) {
         query.addSelect('user.passwordHash');
     }
     return query.getOne();
 }
 
+/** The user, if not removed or suspended */
 export async function findActiveUser(id: number): Promise<User | null> {
-    const user = await (await TypeOrm.getRepository(User)).findOneBy({ id, removedDate: IsNull() });
+    const user = await (await TypeOrm.getRepository(User)).findOneBy({ id, removedDate: IsNull(), suspendedDate: IsNull() });
     return user && mayUseAccount(user) ? user : null;
 }
 
 // The built-in admin signs in only with its password: turning that off (`adminPasswordSignIn`) disables the account
 function mayUseAccount(user: User): boolean {
-    return user.username !== DEFAULT_ADMIN_USERNAME || readSettings().adminPasswordSignIn;
+    return user.username !== DEFAULT_ADMIN_USERNAME || herdSettings().adminPasswordSignIn;
 }
 
 // Compared against when the login matches no user, so response time doesn't reveal which emails exist
@@ -122,7 +128,7 @@ export async function authenticateWithPassword(login: string, password: string, 
     const user = await findUserByLogin(login, true);
     let valid = false;
     try {
-        if (user && !user.removedDate && user.passwordHash && mayUseAccount(user)) {
+        if (user && !user.removedDate && !user.suspendedDate && user.passwordHash && mayUseAccount(user)) {
             valid = await verifyPassword(password, user.passwordHash);
         } else {
             await verifyPassword(password, await (dummyHash ??= hashPassword('dummy'))); // takes as long as a real check
@@ -133,6 +139,9 @@ export async function authenticateWithPassword(login: string, password: string, 
     if (!valid || !user) {
         recordFailure(login, address);
         return null;
+    }
+    if (user.unconfirmedEmail) {
+        throw new EmailUnconfirmed();
     }
     if (user.totpEnabled) {
         if (!code) {
@@ -170,7 +179,7 @@ export async function findUserByAccount(provider: string, providerAccountId: str
         where: { provider, providerAccountId },
         relations: { user: true },
     });
-    return account && !account.user.removedDate ? account.user : null;
+    return account && !account.user.removedDate && !account.user.suspendedDate ? account.user : null;
 }
 
 // Returns the user behind an external account, linking it first if it is new and `verifiedEmail` matches an active user
@@ -180,12 +189,7 @@ export async function findOrLinkUser(provider: string, providerAccountId: string
         return linkedUser;
     }
     const user = await findUserByLogin(verifiedEmail, true);
-    if (!user?.email || user.removedDate || normalizeEmail(user.email) !== normalizeEmail(verifiedEmail)) {
-        return null;
-    }
-    // Rows auto-created by the old allow-list scheme have no password: removing an email from the list used to revoke
-    // access, so they must not get back in by email
-    if (!user.passwordHash && !isBootstrapAdmin(user.email)) {
+    if (!user?.email || user.removedDate || user.suspendedDate || normalizeEmail(user.email) !== normalizeEmail(verifiedEmail)) {
         return null;
     }
     // orIgnore: a concurrent sign-in may have just linked it
@@ -196,140 +200,39 @@ export async function findOrLinkUser(provider: string, providerAccountId: string
     return findUserByAccount(provider, providerAccountId);
 }
 
-export async function ensureBootstrapAdmin(email: string, name: string): Promise<void> {
-    const users = await TypeOrm.getRepository(User);
-    const user = await findUserByLogin(email) ?? users.create({ email: normalizeEmail(email), username: normalizeEmail(email), name });
-    if (user.id && user.role === UserRole.ADMIN && !user.removedDate) {
-        return;
-    }
-    user.role = UserRole.ADMIN;
-    user.removedDate = null;
-    try {
-        await users.save(user);
-    } catch (e) {
-        // A concurrent sign-in created it first
-        if (!isUniqueViolation(e)) {
-            throw e;
-        }
-    }
-}
-
-// Creates or updates the default admin from band settings; called at startup. Fails if the hash is missing, unless
-// `adminPasswordSignIn` is off
+// Creates or updates the built-in herd admin from config/config.json; called at startup. Fails if the hash is
+// missing, unless `adminPasswordSignIn` is off
 export async function ensureDefaultAdmin(): Promise<void> {
-    const { adminPasswordHash, adminPasswordSignIn } = readSettings();
+    const { adminPasswordHash } = instanceConfig();
+    const { adminPasswordSignIn } = herdSettings();
     if (adminPasswordSignIn && !isPasswordHash(adminPasswordHash)) {
-        throw new Error(`${localDataRoot}/${settingsFilename}: "adminPasswordHash" is missing or invalid. Generate it with: npm run hash-password`);
+        throw new Error(`${configPath}: "adminPasswordHash" is missing or invalid. Generate it with: npm run hash-password`);
     }
     const passwordHash = isPasswordHash(adminPasswordHash) ? adminPasswordHash : null;
     const users = await TypeOrm.getRepository(User);
-    if (!adminPasswordSignIn && !await users.existsBy({ role: UserRole.ADMIN, removedDate: IsNull(), username: Not(DEFAULT_ADMIN_USERNAME) })) {
-        console.warn(`"adminPasswordSignIn" is off and there is no other admin: nobody can manage users or settings`);
+    if (!adminPasswordSignIn && !await users.existsBy({ herdRole: HerdRole.ADMIN, removedDate: IsNull(), username: Not(DEFAULT_ADMIN_USERNAME) })) {
+        console.warn(`"adminPasswordSignIn" is off and there is no other herd admin: nobody can manage users or settings`);
     }
     const admin = await findUserByLogin(DEFAULT_ADMIN_USERNAME, true)
         ?? users.create({ username: DEFAULT_ADMIN_USERNAME, name: 'Admin', email: null, sessionVersion: 0 });
-    if (admin.id && admin.passwordHash === passwordHash && admin.role === UserRole.ADMIN && !admin.removedDate) {
+    if (admin.id && admin.passwordHash === passwordHash && admin.herdRole === HerdRole.ADMIN && !admin.removedDate) {
         return;
     }
     if (admin.id && admin.passwordHash !== passwordHash) {
         admin.sessionVersion++; // password changed in settings: sign out everywhere, and reset two-step (lost device)
         Object.assign(admin, { totpEnabled: false, totpSecret: null, totpLastStep: null });
     }
-    Object.assign(admin, { passwordHash, role: UserRole.ADMIN, removedDate: null });
+    Object.assign(admin, { passwordHash, herdRole: HerdRole.ADMIN, removedDate: null });
     await users.save(admin);
-}
-
-export interface UserListItem {
-    id: number;
-    name: string;
-    login: string;
-    role: UserRole;
-    signInMethods: string[];
-    managedBySettings: boolean;
-}
-
-export async function listUsers(): Promise<UserListItem[]> {
-    const users = await (await TypeOrm.getRepository(User)).createQueryBuilder('user')
-        .addSelect('user.passwordHash')
-        .leftJoinAndSelect('user.accounts', 'account')
-        .where('user.removedDate IS NULL')
-        .orderBy('user.name')
-        .getMany();
-    return users.map(user => ({
-        id: user.id,
-        name: user.name,
-        login: user.email ?? user.username,
-        role: user.role,
-        signInMethods: [
-            ...(user.passwordHash ? ['password'] : []),
-            ...(user.totpEnabled ? ['two-step'] : []),
-            ...new Set(user.accounts?.map(account => account.provider)),
-        ],
-        managedBySettings: isManagedBySettings(user),
-    }));
 }
 
 /** What's wrong with a new password, or null: its length, or being found in data breaches (`breachedPasswordCheck`) */
 export async function newPasswordProblem(password: string): Promise<string | null> {
     const problem = passwordProblem(password);
-    if (problem || !readSettings().breachedPasswordCheck) return problem;
+    if (problem || !herdSettings().breachedPasswordCheck) return problem;
     const count = await breachCount(password);
     if (count === null) console.warn("Couldn't check a new password against known breaches: allowed");
     return count ? 'This password has appeared in data breaches. Choose another one.' : null;
-}
-
-// Re-adding the email of a removed user restores it with the new password and role
-export async function createUser(input: { email: unknown, name?: unknown, password: unknown, role?: unknown }): Promise<User> {
-    const email = normalizeEmail(String(input.email ?? ''));
-    const name = String(input.name ?? '').trim() || email;
-    const password = String(input.password ?? '');
-    const role = (input.role ?? UserRole.EDITOR) as UserRole;
-
-    if (!/^[^\s@]+@[^\s@]+\.[^\s@]+$/.test(email)) {
-        error(400, 'Invalid email address');
-    }
-    const problem = await newPasswordProblem(password);
-    if (problem) {
-        error(400, problem);
-    }
-    if (!Object.values(UserRole).includes(role)) {
-        error(400, 'Invalid role');
-    }
-
-    const users = await TypeOrm.getRepository(User);
-    const existing = await findUserByLogin(email);
-    if (existing && !existing.removedDate) {
-        error(409, 'A user with this email already exists');
-    }
-    const user = existing ?? users.create({ email, username: email });
-    Object.assign(user, { name, role, passwordHash: await hashPassword(password), removedDate: null });
-    try {
-        const saved = await users.save(user);
-        return (await findActiveUser(saved.id))!;
-    } catch (e) {
-        if (isUniqueViolation(e)) {
-            error(409, 'A user with this email already exists');
-        }
-        throw e;
-    }
-}
-
-// Revokes all sign-in methods, sessions and Backline links, and hides the user; see `User.removedDate`
-export async function removeUser(id: number): Promise<void> {
-    const user = await findActiveUser(id);
-    if (!user) {
-        error(404, 'User not found');
-    }
-    if (isManagedBySettings(user)) {
-        error(400, 'This user is configured in band settings and cannot be removed here');
-    }
-    const db = await TypeOrm.getDb();
-    await db.transaction(async manager => {
-        await manager.delete(UserAccount, { user: { id } });
-        await manager.update(User, id, { removedDate: new Date(), passwordHash: null });
-        await manager.increment(User, { id }, 'sessionVersion', 1);
-    });
-    await removeLinksOf(id);
 }
 
 export async function getProfile(id: number) {
@@ -337,18 +240,14 @@ export async function getProfile(id: number) {
         .addSelect('user.passwordHash')
         .where('user.id = :id', { id })
         .getOneOrFail();
+    const { name, handle, herdRole, about, instruments, city, website, visibility, showBands, locale, avatar } = user;
     return {
-        name: user.name,
-        login: user.email ?? user.username,
-        role: user.role,
+        name, handle, herdRole, about, instruments, city, website, visibility, showBands, locale, avatar,
+        login: loginOf(user),
         hasPassword: !!user.passwordHash,
         twoStepEnabled: user.totpEnabled,
         isDefaultAdmin: user.username === DEFAULT_ADMIN_USERNAME,
     };
-}
-
-export async function updateName(id: number, name: string): Promise<void> {
-    await (await TypeOrm.getRepository(User)).update(id, { name });
 }
 
 // Ends all the user's sessions, current one included: they carry the old `sessionVersion`

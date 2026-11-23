@@ -11,6 +11,7 @@ export interface MailboxEvents {
 }
 
 export function openMailbox(url: string, on: MailboxEvents): { send(text: string): void, close(): void } {
+    const withId = (params: string) => `${url}${url.includes('?') ? '&' : '?'}id=${id}${params}`;
     let id: string | null = null;
     let after = 0;
     let open = true;
@@ -21,7 +22,7 @@ export function openMailbox(url: string, on: MailboxEvents): { send(text: string
         let retryMs = 300;
         while (open) {
             try {
-                const res = await fetch(id ? `${url}?id=${id}&after=${after}` : url, { cache: 'no-store', signal: AbortSignal.timeout(35_000) });
+                const res = await fetch(id ? withId(`&after=${after}`) : url, { cache: 'no-store', signal: AbortSignal.timeout(35_000) });
                 if (res.status === 410) {
                     id = null;
                     continue;
@@ -60,7 +61,7 @@ export function openMailbox(url: string, on: MailboxEvents): { send(text: string
         }
         posting = true;
         while (open && id && outbox.length > 0) {
-            await fetch(`${url}?id=${id}`, {
+            await fetch(withId(''), {
                 method: 'POST',
                 headers: { 'content-type': 'application/json' },
                 body: JSON.stringify({ items: outbox.splice(0) }),

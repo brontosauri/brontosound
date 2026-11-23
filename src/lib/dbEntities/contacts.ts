@@ -1,9 +1,13 @@
-import { Column, Entity, PrimaryGeneratedColumn } from "typeorm";
+import { Column, Entity, ManyToOne, PrimaryGeneratedColumn } from "typeorm";
+import { Band } from "./band";
 
 @Entity()
 export class Contact {
     @PrimaryGeneratedColumn()
     id: number;
+
+    @ManyToOne(() => Band, { nullable: false, onDelete: 'CASCADE' })
+    band: Band;
 
     @Column({ type: 'varchar' })
     name: string;

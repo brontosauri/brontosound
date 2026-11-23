@@ -1,3 +1,5 @@
+import { bandApi } from '$lib/bandApi';
+
 /** A file or folder in a song's folder. `path` is relative to the song folder, "/"-separated. */
 export interface SongFile {
     name: string;
@@ -25,7 +27,7 @@ export function fileAtPath(path: string): SongFile {
 export function songFileUrl(songId: number, file: SongFile, download = false): string {
     const params = new URLSearchParams({ path: file.path });
     if (download) params.set('download', '1');
-    return `/api/song/${songId}/file?${params}`;
+    return bandApi(`/song/${songId}/file?${params}`);
 }
 
 export function formatSize(bytes: number): string {

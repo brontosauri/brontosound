@@ -1,0 +1,5 @@
+# Allowlist: only what the Dockerfile copies. Keeps config/ (secrets), data/ (database) out of the build context.
+*
+!build
+!package.json
+!package-lock.json

@@ -17,7 +17,7 @@
 
 {#if keySetting && !config.key}
     <div class="flex h-full min-h-[300px] items-center justify-center rounded-lg border border-dashed border-gray-300 p-6 text-center text-sm text-gray-500">
-        <p>There is no map yet: {name} needs <code>{keySetting}</code> in bandSettings.json.</p>
+        <p>There is no map yet: {name} needs <code>{keySetting}</code> in herd settings.</p>
     </div>
 {:else if config.provider === 'google'}
     <GoogleMap token={config.key!} lat={location?.lat} lng={location?.lng} {onSave} />

@@ -6,15 +6,17 @@ Brontosound Backline is the band's companion app for playing live. Brontosound i
 
 Brontosound does three things, and nothing else:
 
-1. **Links** a Backline to a user. In Backline the user enters this site's address; Backline opens `/backline/link?request=<id>` in the browser, the signed-in user confirms (the page and Backline show the same code), and Backline fetches its token from `/backline/host/link`, once, within 10 minutes. Only the token's hash is stored ([links.ts](../src/lib/server/backline/links.ts)). Profile → Backline lists the links and unlinks them.
-2. **Decides who gets in**: band members, signed in as usual; or, when Backline shares publicly, anyone with the PIN Backline shows (10 attempts per address per 15 minutes), up to `backlineMaxGuests` browsers at once (50 by default; band members don't count).
+1. **Links** a Backline to a user and one of their bands. In Backline the user enters this site's address; Backline opens `/backline/link?request=<id>` in the browser, the signed-in user picks the band and confirms (the page and Backline show the same code), and Backline fetches its token from `/backline/host/link`, once, within 10 minutes. Only the token's hash is stored ([links.ts](../src/lib/server/backline/links.ts)). Profile → Backline lists the links and unlinks them; leaving the band removes them.
+2. **Decides who gets in**: the band's members, signed in as usual; or, when Backline shares publicly, anyone with the PIN Backline shows (10 attempts per address per 15 minutes), up to `backlineMaxGuests` browsers at once per band (50 by default; members don't count).
 3. **Passes messages** between Backline and the browsers ([liveSession.ts](../src/lib/server/backline/liveSession.ts)). It never reads them. The page the browsers show is HTML sent by Backline, run in a sandboxed frame so it cannot touch this site's session.
 
 Once in, the page in the frame looks for a direct path to Backline (WebRTC) and uses this server as the fallback. The messages and the reasons are in Backline's `docs/reference/share.md`.
 
-## One Backline at a time
+## One Backline per band
 
-The live session is kept in memory. The Backline that announced last is the live one; announcing kicks out another one and its browsers. A Backline that stops asking for 45 s is gone; when the server restarts, Backline announces again by itself.
+Each band has its own live session, kept in memory. The band's Backline that announced last is the live one; announcing kicks out the band's other one and its browsers. A Backline that stops asking for 45 s is gone; when the server restarts, Backline announces again by itself.
+
+Everyone opens `/backline`: a member in several live bands picks one (`?band=<handle>`), and a guest's PIN picks the session it belongs to. So a public announce whose PIN is live in another band's public session gets a 409: Backline must pick another PIN.
 
 ## Mailboxes
 
@@ -22,9 +24,9 @@ Both sides talk in plain HTTP requests ([mailbox.ts](../src/lib/server/backline/
 
 | Route | For | Signs in with |
 |---|---|---|
-| `/backline/host` | Backline: `PUT` announce, `GET` messages from browsers, `POST` messages to them | `Authorization: Bearer <token>` |
-| `/backline/client` | A browser: `GET` take a seat or fetch messages, `POST` messages to Backline | session, or the guest cookie (a token given for the PIN, dropped when the PIN changes) |
+| `/backline/host` | Backline: `PUT` announce, `GET` messages from browsers, `POST` messages to them | `Authorization: Bearer <token>`, which also says the band |
+| `/backline/client` | A browser: `GET` take a seat (`?band=<id>`) or fetch messages, `POST` messages to Backline | session, or the guest cookie (a token given for the PIN, dropped when the PIN changes) |
 
 ## Settings
 
-`backlineStunServers` in `data/bandSettings.json` (shown under Settings → Backline): STUN servers that tell Backline and the browsers their public addresses, for the direct path between networks. Default: `["stun:stun.l.google.com:19302"]` (Google sees the addresses, nothing else). `[]`: devices on different networks always go through this server.
+`backlineStunServers` in herd settings (Admin → Backline): STUN servers that tell Backline and the browsers their public addresses, for the direct path between networks. Default: `["stun:stun.l.google.com:19302"]` (Google sees the addresses, nothing else). `[]`: devices on different networks always go through this server.

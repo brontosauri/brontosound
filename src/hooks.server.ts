@@ -2,18 +2,19 @@ import type { Handle, HandleServerError, ServerInit } from "@sveltejs/kit";
 import { randomBytes } from "node:crypto";
 import { handle as authenticationHandle } from "./auth"
 import { sequence } from "@sveltejs/kit/hooks";
-import { isApiRoute, isPublicRoute, type BrontoSession } from "$lib/server/session";
-import { User } from "$lib/dbEntities/user";
+import { isApiRoute, isBandRoute, isPublicRoute, type BrontoSession } from "$lib/server/session";
+import { User, permissionsFromHerdRole } from "$lib/dbEntities/user";
+import { permissionsFromBandRole, type Membership } from "$lib/dbEntities/band";
 import { instanceToPlain } from "class-transformer";
-import { permissionsFromRole } from "$lib/dbEntities/user";
 import { error, redirect } from "@sveltejs/kit";
 import { findActiveUser } from "$lib/server/users";
+import { findMembership } from "$lib/server/bands";
 import { isSetUp, setupPage } from "$lib/server/setup";
-import { settingsPath } from "$lib/server/config";
+import { configPath } from "$lib/server/config";
 
 export const init: ServerInit = async () => {
     if (!await isSetUp()) {
-        console.warn(`AUTH_SECRET or ${settingsPath} is missing: pages show how to set up, with npm run init`);
+        console.warn(`${configPath} or its authSecret is missing: pages show how to set up, with npm run init`);
     }
 }
 
@@ -29,6 +30,7 @@ export const authorizationHandle: Handle = async ({ event, resolve }) => {
     const authSession = await event.locals.auth();
     // console.log("authSession:", authSession);
     let brontoSession: BrontoSession | null = null;
+    let membership: Membership | null = null;
 
     // Looked up on every request, so removed users lose access immediately
     const userId = Number(authSession?.user?.id);
@@ -36,10 +38,20 @@ export const authorizationHandle: Handle = async ({ event, resolve }) => {
 
     // Authenticated user
     if (authSession && brontoUser) {
+        // A band's pages are for its members only: others, herd admins too, don't see it exists
+        if (isBandRoute(event.route.id)) {
+            membership = await findMembership(event.params.handle ?? '', brontoUser.id);
+            if (!membership) {
+                error(404, 'Not found');
+            }
+            if (membership.band.suspendedDate) {
+                error(403, "The herd's admins suspended this band. Ask them why.");
+            }
+        }
         brontoSession = {
             user: instanceToPlain(brontoUser) as User,
             auth: authSession,
-            permissions: permissionsFromRole[brontoUser.role],
+            permissions: [...permissionsFromHerdRole[brontoUser.herdRole], ...(membership ? permissionsFromBandRole[membership.role] : [])],
         }
 
         // Unauthenticated user
@@ -51,6 +63,7 @@ export const authorizationHandle: Handle = async ({ event, resolve }) => {
     }
 
     event.locals['brontoSession'] = brontoSession;
+    event.locals.membership = membership;
 
     return resolve(event)
 };

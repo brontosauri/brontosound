@@ -1,3 +1,4 @@
+import { bandApi } from '$lib/bandApi';
 import { joinPath } from './songFile';
 
 /** A file on its way to the song folder, shown in the folder until it's there */
@@ -12,7 +13,7 @@ export interface Upload {
 export function uploadSongFile(songId: number, upload: Upload, onProgress: (fraction: number) => void): Promise<void> {
     return new Promise((resolve, reject) => {
         const request = new XMLHttpRequest();
-        request.open('POST', `/api/song/${songId}/file?${new URLSearchParams({ path: joinPath(upload.folder, upload.file.name) })}`);
+        request.open('POST', bandApi(`/song/${songId}/file?${new URLSearchParams({ path: joinPath(upload.folder, upload.file.name) })}`));
         request.upload.onprogress = event => event.lengthComputable && onProgress(event.loaded / event.total);
         request.onload = () => request.status < 300 ? resolve() : reject(new Error(errorMessage(request)));
         request.onerror = () => reject(new Error('The connection failed'));

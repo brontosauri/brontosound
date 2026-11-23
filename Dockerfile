@@ -9,7 +9,11 @@ WORKDIR /app
 COPY ./build/ ./dist
 COPY package.json ./
 COPY package-lock.json ./
-RUN npm install
+RUN npm ci --omit=dev
+
+# Not root; /app/data (a volume) must be writable by uid 1000; /app/config (a volume) readable
+RUN mkdir data config && chown node:node data
+USER node
 
 # Uploads to song folders (adapter-node accepts 512K by default)
 ENV BODY_SIZE_LIMIT=200M

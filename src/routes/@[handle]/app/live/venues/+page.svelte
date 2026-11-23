@@ -1,0 +1,111 @@
+<script lang="ts">
+    import { formatDate } from '$lib/dates';
+    import { page } from '$app/state';
+  import { bandApi } from '$lib/bandApi';
+    import { saveEntityViaApi } from '$lib/db';
+    import { LiveVenue } from '$lib/dbEntities/live';
+    import { buildVenueUrl } from '$lib/misc.js';
+    import { can } from '$lib/permissions';
+    import { Button, Table, TableBody, TableBodyCell, TableBodyRow, TableHead, TableHeadCell, Input, Spinner } from 'flowbite-svelte';
+    import { CirclePlusOutline } from 'flowbite-svelte-icons';
+    import type { DeepPartial } from 'typeorm';
+
+    export let data;
+    export let venues = data.venues as LiveVenue[];
+    const canEdit = can(data.brontoSession, 'live.write');
+    // console.log('Venues', venues);
+
+    let busy = false;
+    let newVenueName = '';
+
+    async function addNewVenue() {
+      busy = true;
+      console.log('Adding venue', newVenueName);
+      let newVenue: DeepPartial<LiveVenue> = {
+        name: newVenueName,
+      };
+      let venue: LiveVenue = await saveEntityViaApi(LiveVenue, newVenue, bandApi('/live/venue'));
+      console.log('Added venue', venue);
+      venues.push(venue);
+      venues = venues;
+      newVenueName = '';
+      busy = false;
+    }
+
+    const famousVenues = ["The Cavern Club", "Wembley", "Madison Square Garden", "Sydney Opera House", "Red Rocks Amphitheatre", "San Siro", "Forum di Assago", "Alcatraz", "The Fillmore", "The Troubadour", "The Royal Albert Hall", "The Hollywood Bowl", "The O2 Arena"];
+      
+    function getRandomVenue() {
+      return famousVenues[Math.floor(Math.random() * famousVenues.length)];
+    }
+  </script>
+  
+<div class="busyContainer">
+  {#if busy}
+    <Spinner class="mt-2" />
+  {:else}
+    <p class="mt-2">&nbsp;</p>
+  {/if}
+</div>
+
+
+
+<Table hoverable={true}>
+  <TableHead>
+    <!-- <TableHeadCell class="!p-4">
+      <Checkbox />
+    </TableHeadCell> -->
+    <TableHeadCell>Venue Name</TableHeadCell>
+    <TableHeadCell>Added</TableHeadCell>
+    <!-- <TableHeadCell>
+      <span class="sr-only"> Edit </span>
+    </TableHeadCell> -->
+  </TableHead>
+  <TableBody>
+
+    {#each venues as venue}
+      <TableBodyRow>
+        <!-- <TableBodyCell class="!p-4">
+          <Checkbox />
+        </TableBodyCell> -->
+        <TableBodyCell>
+          <a href={buildVenueUrl(page.params.handle ?? '', venue)}>
+            {venue.name}
+          </a>
+        </TableBodyCell>
+        <TableBodyCell>{formatDate(venue.creationDate)}</TableBodyCell>
+        <!-- <TableBodyCell>
+          <a href="/tables" class="font-medium text-primary-600 hover:underline dark:text-primary-500">
+            Edit
+          </a>
+        </TableBodyCell> -->
+      </TableBodyRow>
+    {/each}
+  </TableBody>
+</Table>
+
+{#if canEdit}
+<div>
+  <form on:submit={addNewVenue} class="newVenueForm">
+    <Input class="mt-2" placeholder={getRandomVenue()} bind:value={newVenueName} />
+    <span class="newVenueButton" title="Add new venue"><Button class="mt-2" color="primary" disabled={newVenueName.length == 0} on:click={addNewVenue}><CirclePlusOutline /></Button></span>
+  </form>
+</div>
+{/if}
+
+<style>
+  .busyContainer {
+    text-align: right;
+    margin-bottom: .5em;
+  }
+
+  .newVenueForm {
+    display: flex;
+    flex-direction: row;
+    max-width: 800px;
+    margin-top: 1em;
+  }
+
+  .newVenueButton {
+    margin-left: 1em;
+  }
+</style>

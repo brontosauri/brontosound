@@ -5,11 +5,12 @@ node_modules*
 /build
 /.svelte-kit
 /package
-.env
-!.env.example
+/config/*
+!/config/config.template.json
 vite.config.js.timestamp-*
 vite.config.ts.timestamp-*
 data/
 static/band/
 database.sqlite
 research/
+/data*

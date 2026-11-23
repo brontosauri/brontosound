@@ -38,7 +38,7 @@ Space plays and pauses. Click the timeline to set a start point: every play star
 
 ## Soundfonts
 
-The player offers the built-in synth, every folder in `data/soundfonts/`, then `soundfonts` in band settings (`[{ "name": …, "url": … }]`). `defaultSoundfont` (a name) is where users start; each user's last pick is kept (`User.soundfont`). With neither, the first soundfont after the synth.
+The player offers the built-in synth, every folder in `data/soundfonts/`, then `soundfonts` in herd settings (`[{ "name": …, "url": … }]`). `defaultSoundfont` (a name) is where users start; each user's last pick is kept (`User.soundfont`). With neither, the first soundfont after the synth.
 
 A soundfont is the [MIDI.js](https://github.com/gleitz/midi-js-soundfonts) layout: `<instrument>-mp3.js` per GM instrument, plus `percussion-mp3.js` for drums. Only the instruments a file uses are loaded. An instrument that can't load plays through the built-in synth; if none can, the player says so.
 
@@ -53,6 +53,6 @@ Each instrument is normalised when it loads: its samples are scaled so the loude
 - `src/lib/chords/`: one parser per format into `ChordChart` (or `IRealSong`), transposition, `chartTimeline.ts` (bars for the player).
 - `src/lib/player/`: one engine per source, behind `PlaybackEngine`; `transport.svelte.ts` holds the practice controls. MIDI notes go to `MidiInstruments`: `sampler.ts` (soundfonts) or `midiSynth.ts`.
 - `src/lib/server/soundfonts.ts`: the soundfonts on offer and the user's pick; `/api/soundfont` remembers it.
-- `src/lib/components/{songFolder,viewer,player}/`, and the page in `src/routes/app/songbook/[songId]/[songSlug]/`.
+- `src/lib/components/{songFolder,viewer,player}/`, and the page in `src/routes/@[handle]/app/songbook/[songId]/[songSlug]/`.
 - `/api/song/[songId]/folder`, `/file` and `/pins`: files are addressed relative to the song folder and can't leave it. `/file` also takes uploads (POST), saves (PUT) and deletions (DELETE); the request body is the file. adapter-node caps bodies at 512K unless `BODY_SIZE_LIMIT` is set (the Dockerfile sets 200M).
 - `PATCH /api/song/[songId]`: title and artist. The folder keeps its name.

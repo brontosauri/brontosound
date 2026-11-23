@@ -14,7 +14,7 @@
     let page: string | null = null;
     $: if (data.page) {
         page = data.page;
-    } else if (data.live) {
+    } else if (data.asksPin || data.liveBands.length > 0) {
         page = null;
     }
 
@@ -27,7 +27,7 @@
     function relay(frame: HTMLIFrameElement) {
         const toFrame = (text: string) => frame.contentWindow?.postMessage(text, '*');
         let seated = false;
-        const mailbox = openMailbox('/backline/client', {
+        const mailbox = openMailbox(`/backline/client?band=${data.band}`, {
             opened() {
                 full = false;
                 toFrame('{"t":"open"}');
@@ -80,11 +80,17 @@
     {/if}
 {:else}
     <main class="mx-auto max-w-xs space-y-6 p-8 pt-24 text-center">
-        <img src={data.bandLogo} alt="" class="mx-auto h-20" />
-        <Heading tag="h1" class="text-2xl">{data.bandName}</Heading>
-        {#if !data.live}
+        <img src="/bronto.png" alt="" class="mx-auto h-20" />
+        <Heading tag="h1" class="text-2xl">{data.herdName}</Heading>
+        {#if data.liveBands.length > 1}
+            <P class="text-gray-500">Live now:</P>
+            {#each data.liveBands as band}
+                <Button href="?band={band.handle}" color="light" class="w-full">{band.name}</Button>
+            {/each}
+        {:else if !data.asksPin}
             <P class="text-gray-500">Nothing is live right now.</P>
-        {:else if data.asksPin}
+        {/if}
+        {#if data.asksPin}
             <form method="POST" bind:this={pinForm} class="space-y-4" use:enhance>
                 {#if form?.pinError}
                     <Alert color="red">{form.pinError}</Alert>

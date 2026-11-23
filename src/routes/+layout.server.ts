@@ -1,12 +1,15 @@
-import { readSettings } from '$lib/server/bandSettings';
+import { herdSettings, Registrations } from '$lib/server/herdSettings';
+import { emailReady } from '$lib/server/mail';
 import type { LayoutServerLoad } from './$types';
- 
+
 export const load: LayoutServerLoad = async (event) => {
-  const bandSettings = await readSettings();
-  
+  const session = event.locals['brontoSession'];
   return {
-    bandName: bandSettings.bandName ?? "Brontosound",
-    bandLogo: bandSettings.bandLogo ?? "/bronto.png",
-    brontoSession: event.locals['brontoSession']
+    herdName: herdSettings().herdName,
+    herdContact: herdSettings().contactEmail,
+    registrationsOpen: herdSettings().registrations == Registrations.OPEN,
+    emailReady: emailReady(),
+    locale: session?.user.locale ?? herdSettings().locale, // for dates ($lib/dates.ts)
+    brontoSession: session,
   }
 };

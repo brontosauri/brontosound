@@ -1,7 +1,16 @@
 import { CredentialsSignin } from "@auth/sveltekit"
 import { fail } from "@sveltejs/kit"
 import { signIn } from "../../auth"
-import type { Actions } from "./$types"
+import { joiningBand } from "$lib/server/inviteLinks"
+import { mayJoin, rememberInvite } from "$lib/server/registration"
+import type { Actions, PageServerLoad } from "./$types"
+
+// `?invite=<token>`: signing in to join with a band's invite link; back at it, they join
+export const load: PageServerLoad = async ({ url, cookies, locals }) => {
+    const token = url.searchParams.get('invite')
+    const link = locals.brontoSession ? null : await rememberInvite(cookies, token)
+    return { joining: link && joiningBand(link), mayJoinWithInvite: !!link && await mayJoin(token) }
+}
 
 export const actions: Actions = {
     default: async (event) => {

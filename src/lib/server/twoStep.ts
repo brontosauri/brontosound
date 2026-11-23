@@ -1,6 +1,6 @@
 import TypeOrm from '$lib/db';
 import { User } from '$lib/dbEntities/user';
-import { readSettings } from './bandSettings';
+import { herdSettings } from './herdSettings';
 import { newTotpSecret, totpStep, totpUri } from './totp';
 
 // Two-step verification for password sign-ins: a code from an authenticator app (TOTP). See docs/authentication.md
@@ -20,7 +20,7 @@ export async function startTwoStepSetup(userId: number): Promise<void> {
 /** What authenticator apps scan to set up two-step, while it's being set up; else null */
 export async function twoStepSetupUri(userId: number, account: string): Promise<string | null> {
     const user = await withSecret(userId);
-    return user.totpSecret && !user.totpEnabled ? totpUri(user.totpSecret, account, readSettings().bandName) : null;
+    return user.totpSecret && !user.totpEnabled ? totpUri(user.totpSecret, account, herdSettings().herdName) : null;
 }
 
 /** Whether `code` is valid for the user and new: each code works once */

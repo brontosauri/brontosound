@@ -4,7 +4,7 @@ import { authSecretWarning, checkAuthSecret } from './authSecret';
 describe('checkAuthSecret', () => {
     it('refuses a missing or placeholder secret', () => {
         for (const secret of [undefined, '', 'a-secret-of-your-choice']) {
-            expect(() => checkAuthSecret(secret)).toThrow('AUTH_SECRET');
+            expect(() => checkAuthSecret(secret)).toThrow('authSecret');
         }
     });
 

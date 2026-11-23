@@ -4,7 +4,7 @@ Brontosound is a band management web app for record labels, powered by [`create-
 
 ## Developing
 
-Once you've cloned this repo and installed dependencies with `npm install` (or `pnpm install` or `yarn`), create `.env` and the `data/` folder (it asks for your band's name and an admin password):
+Once you've cloned this repo and installed dependencies with `npm install` (or `pnpm install` or `yarn`), create `config/config.json` and the `data/` folder (it asks for a password for the herd's admin):
 
 ```bash
 npm run init
@@ -21,7 +21,7 @@ npm run dev -- --open
 
 ## Admin password
 
-`npm run init` sets the built-in `admin` user's password. To change it, set a new hash as `adminPasswordHash` in `data/bandSettings.json`, then restart the server:
+`npm run init` sets the built-in `admin` user's password. To change it, set a new hash as `adminPasswordHash` in `config/config.json`, then restart the server:
 
 ```bash
 npm run -s hash-password
@@ -69,7 +69,7 @@ docker build . -t brontosound:latest
 Run:
 
 ```bash
-docker run --env-file .env -p 3888:3000 -e ORIGIN="http://localhost:3888" -v ./data:/app/data brontosound:latest
+docker run -p 3888:3000 -e ORIGIN="http://localhost:3888" -v ./config:/app/config -v ./data:/app/data brontosound:latest
 ```
 
 Online, behind a proxy: see [docs/deployment.md](docs/deployment.md).
@@ -77,7 +77,7 @@ Online, behind a proxy: see [docs/deployment.md](docs/deployment.md).
 Debug:
 
 ```bash
-docker run --env-file .env --rm -it --entrypoint bash brontosound:latest
+docker run -v ./config:/app/config --rm -it --entrypoint bash brontosound:latest
 ```
 
 Custom push:

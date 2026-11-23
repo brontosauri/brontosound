@@ -21,7 +21,7 @@ describe('filesystem storage', () => {
 
     it('refuses paths outside the songs folder', async () => {
         for (const outside of ['bandSettings.json', 'Songs/../bandSettings.json', '../etc/passwd', 'Songs/x\0']) {
-            await expect(storage.readTextFile(outside)).rejects.toThrow('Outside the songs folder');
+            await expect(storage.readTextFileContent(outside)).rejects.toThrow('Outside the songs folder');
         }
         await expect(storage.writeFile('Songs/../written.txt', new Uint8Array())).rejects.toThrow('Outside the songs folder');
         expect(fs.existsSync(path.join(base, 'written.txt'))).toBe(false);
