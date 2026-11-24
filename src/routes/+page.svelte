@@ -17,9 +17,9 @@
 
 <svelte:head><title>{data.herdName}</title></svelte:head>
 
-<div class="flex min-h-screen flex-col">
+<div class="flex min-h-dvh flex-col">
 
-    <main class="flex flex-1 flex-col items-center gap-7 px-6 pt-16 text-center">
+    <main class="flex flex-col items-center gap-7 px-6 pt-16 text-center">
         <span class="rounded bg-primary-100 px-2.5 py-0.5 text-xs font-medium text-primary-800">A Brontosound herd</span>
         <h1 class="text-[clamp(56px,9vw,116px)] font-bold leading-[0.95] tracking-tight text-gray-900">{data.herdName}</h1>
         {#if data.tagline}<p class="max-w-xl text-xl text-gray-600">{data.tagline}</p>{/if}

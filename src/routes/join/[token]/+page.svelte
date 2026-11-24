@@ -5,11 +5,19 @@
     import BrontoHeader from "$lib/components/shell/BrontoHeader.svelte";
     import JoiningBand from "$lib/components/JoiningBand.svelte";
     import { bandAppUrl } from "$lib/misc";
+    import ShareMeta from "$lib/components/ShareMeta.svelte";
     import LinkClosed from "./LinkClosed.svelte";
 
     let { data } = $props();
     const token = page.params.token;
 </script>
+
+{#if data.joining}
+    <ShareMeta title="Join {data.joining.name}" image={data.joining.logo}
+        description="{data.joining.invitedBy ? `${data.joining.invitedBy} invited you` : "You're invited"} to the band on {data.herdName}." />
+{:else}
+    <ShareMeta title="Invite link" />
+{/if}
 
 <BrontoHeader />
 
