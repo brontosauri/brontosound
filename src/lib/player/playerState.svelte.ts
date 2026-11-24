@@ -23,6 +23,9 @@ export class PlayerState {
     isChart = $derived(this.loaded?.kind == 'chart');
     usesTempo = $derived(this.loaded?.kind == 'midi' || this.loaded?.kind == 'chart');
     barSeconds = $derived(this.loaded?.kind == 'chart' ? secondsPerBar(this.loaded.timeline) : 0);
+    /** A practice setting is off the source's own */
+    changed = $derived(!!this.loaded && (this.speed != 100 || this.semitones != 0 || this.cents != 0 || this.tempo != baseTempo(this.loaded)
+        || this.tracksOn.includes(false) || (this.isChart && !(this.click && this.countIn))));
 
     view = $derived.by((): TimelineView | null => {
         const loaded = this.loaded;
@@ -32,7 +35,8 @@ export class PlayerState {
         return null;
     });
 
-    constructor(songId: number, source: () => PlayerSource | null) {
+    /** `autoplay`: play each source as soon as it loads */
+    constructor(songId: number, source: () => PlayerSource | null, autoplay: () => boolean) {
         $effect(() => {
             const current = source();
             if (!current) return;
@@ -44,6 +48,7 @@ export class PlayerState {
                 this.resetSettings(engine);
                 this.transport.attach(engine.engine);
                 this.loaded = engine;
+                if (autoplay()) this.transport.play();
             }, e => this.loadError = (e as Error).message);
             return () => {
                 cancelled = true;

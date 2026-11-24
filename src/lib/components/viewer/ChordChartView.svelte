@@ -48,7 +48,7 @@
     {/if}
 {/snippet}
 
-<div class="flex flex-col gap-7 px-10 pb-10 pt-7">
+<div class="flex flex-col gap-7 px-3 pb-10 pt-5 sm:px-10 sm:pt-7">
     {#if chart.meta.title || metaLine}
         <div>
             {#if chart.meta.title}<div class="text-[22px] font-bold leading-tight text-gray-900">{chart.meta.title}</div>{/if}

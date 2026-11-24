@@ -4,7 +4,7 @@
     let { text }: { text: string } = $props();
 </script>
 
-<div class="markdown flex max-w-3xl flex-col gap-3 px-10 pb-10 pt-7 text-base text-gray-900">
+<div class="markdown flex max-w-3xl flex-col gap-3 px-4 pb-10 pt-5 sm:px-10 sm:pt-7 text-base text-gray-900">
     <Markdown source={text} />
 </div>
 

@@ -62,7 +62,7 @@
     }
 </script>
 
-<section aria-label="Song folder" class="relative rounded-lg border border-gray-200 {dragged ? 'min-h-[220px]' : ''}"
+<section aria-label="Song folder" class="relative border-y border-gray-200 sm:rounded-lg sm:border-x {dragged ? 'min-h-[220px]' : ''}"
     ondragenter={dragEnter} ondragleave={dragLeave} ondragover={event => hasFiles(event) && event.preventDefault()} ondrop={drop}>
     <div class="flex min-h-[48px] flex-wrap items-center justify-between gap-3 border-b border-gray-200 py-1.5 pl-4 pr-3 sm:pl-5 sm:pr-4">
         <nav aria-label="Folder" class="flex flex-wrap items-center gap-2 font-mono text-[15px]">

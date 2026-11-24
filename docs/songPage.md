@@ -1,10 +1,10 @@
 # Song page
 
-A song's page shows its title and artist (click either to edit both), its folder in storage, the selected document, and a player fixed to the bottom of the screen. On phones the player is one bar that opens a sheet with every control.
+A song's page shows its title and artist (click either to edit both), its folder in storage, the selected document, and a player fixed to the bottom of the screen. On phones the folder and viewer go edge to edge, and the player is one bar that opens a sheet with every control.
 
 - **Folder**: icons for everything in the song folder, browsable into subfolders. Accent icons open in Brontosound; grey ones can only be downloaded. Upload, or files dropped on the folder, go into the folder shown, one at a time; a name already there is refused.
 - **Viewer**: the selected document. Files Brontosound can't show get a download panel. Plain-text files (text, Markdown, ChordPro, OnSong) can be edited: Ctrl+S saves, leaving with unsaved changes asks first. Delete, here or in the player, removes the file from storage and unpins it.
-- **Player**: audio and MIDI files, or the chart in the viewer (a metronome counting through its bars). With both, the player asks which; the file is the default. × next to a file's name takes it out of the player; with no chart in the viewer, the player closes.
+- **Player**: one source at a time: an audio or MIDI file, or a chart's track (a metronome counting through its bars). Opening a file puts it in the player; opening a chart leaves the player alone, and Play in the viewer header puts the chart there and plays it. × closes the player. Options shows the practice settings, pin and delete; a dot on it means a setting is off its default.
 
 One document and one audio file can be pinned (`Song.pinnedDocument`, `Song.pinnedAudio`, paths relative to the song folder). Pinned files open with the page; with nothing pinned, the first document and the first audio file by name do.
 

@@ -28,7 +28,7 @@
     const barEndOf = (cell: IRealCell, isRowEnd: boolean) => cell.barEnd ?? (isRowEnd ? '|' : undefined);
 </script>
 
-<div class="flex flex-col gap-2 px-10 pb-10 pt-7">
+<div class="flex flex-col gap-2 px-3 pb-10 pt-5 sm:px-10 sm:pt-7">
     <div class="mb-2">
         <div class="text-[22px] font-bold leading-tight text-gray-900">{song.title}</div>
         {#if metaLine}<div class="mt-1 text-sm text-gray-500">{metaLine}</div>{/if}

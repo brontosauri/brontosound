@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { faChevronLeft, faChevronRight, faDownload, faPencil, faTrashCan } from '@fortawesome/free-solid-svg-icons';
+    import { faChevronLeft, faChevronRight, faDownload, faPencil, faPlay, faTrashCan } from '@fortawesome/free-solid-svg-icons';
     import { Spinner } from 'flowbite-svelte';
     import Fa from 'svelte-fa';
     import { chartKey } from '$lib/chords/chordChart';
@@ -18,8 +18,11 @@
     import TextEditor from './TextEditor.svelte';
     import TextView from './TextView.svelte';
 
-    /** The file selected in the folder, shown in full: charts, documents, or a download panel. When `editable`, text files can be edited. */
-    let { editable, songId, file, document, error, pinned, onTogglePin, transpose = $bindable(), activeBar,
+    /**
+     * The file selected in the folder, shown in full: charts, documents, or a download panel. When `editable`, text files can be edited.
+     * A card from `sm` up, edge to edge on phones.
+     */
+    let { editable, songId, file, document, error, pinned, onTogglePin, playable, inPlayer, onPlay, transpose = $bindable(), activeBar,
         editing = $bindable(), unsavedText = $bindable(), onSaveText, onCloseEditor, onDelete }: {
         editable: boolean, // edit, pin and delete
         songId: number,
@@ -28,6 +31,9 @@
         error: string | null,
         pinned: boolean,
         onTogglePin: () => void,
+        playable: boolean, // a chart with bars, which the player can play
+        inPlayer: boolean, // the player plays this chart
+        onPlay: () => void, // put this chart in the player and play it
         transpose: number, // semitones, for charts
         activeBar: number | null, // the bar the player is on, when a chart drives it
         editing: boolean, // `file` is open in the text editor
@@ -52,23 +58,31 @@
     const actionButton = `${actionLayout} inline-flex items-center rounded-lg border px-3 text-[13px] font-medium focus:outline-none focus:ring-4 focus:ring-primary-300`;
 </script>
 
-<section aria-label="Viewer" class="overflow-hidden rounded-lg border border-gray-200">
+<section aria-label="Viewer" class="overflow-hidden border-y border-gray-200 sm:rounded-lg sm:border-x">
     {#if file && editing}
         <TextEditor {songId} {file} bind:dirty={unsavedText} onSave={onSaveText} onCancel={onCloseEditor} />
     {:else if file}
         <div class="flex min-h-[60px] flex-wrap items-center justify-between gap-x-4 gap-y-3 border-b border-gray-200 py-3 pl-4 pr-4 sm:py-2 sm:pl-5">
-            <div class="flex min-w-0 flex-wrap items-baseline gap-x-2.5 gap-y-1">
-                <span class="font-medium text-gray-900">{file.name}</span>
+            <div class="flex w-full min-w-0 flex-wrap items-center gap-x-2.5 gap-y-1 sm:w-auto">
+                <span class="font-medium text-gray-900 [overflow-wrap:anywhere]">{file.name}</span>
                 <span class="text-[13px] text-gray-500">{document?.typeLabel ?? fileTypeLabel(file)}</span>
+                {#if playable}
+                    <button type="button" aria-pressed={inPlayer} onclick={() => inPlayer || onPlay()}
+                        aria-label={inPlayer ? 'This chart is in the player' : 'Play this chart in the player'} title={inPlayer ? 'In the player' : 'Play this chart in the player'}
+                        class="ml-auto inline-flex h-11 w-11 shrink-0 items-center justify-center rounded-lg border text-primary-700 focus:outline-none focus:ring-4 focus:ring-primary-300 sm:ml-0 sm:h-9 sm:w-9
+                            {inPlayer ? 'cursor-default border-primary-300 bg-primary-100' : 'border-gray-300 bg-white hover:bg-gray-50'}">
+                        <Fa icon={faPlay} size="sm" />
+                    </button>
+                {/if}
             </div>
             <div class="flex w-full flex-wrap items-center gap-2 sm:w-auto">
                 {#if isChart}
-                    <div class="mr-3">
-                        <Stepper label="Key" value={keyLabel(key, transpose)} decreaseLabel="Transpose down a semitone" increaseLabel="Transpose up a semitone"
+                    <div class="w-full sm:mr-3 sm:w-auto">
+                        <Stepper class="justify-between" label="Key" value={keyLabel(key, transpose)} decreaseLabel="Transpose down a semitone" increaseLabel="Transpose up a semitone"
                             onDecrease={() => transposeBy(-1)} onIncrease={() => transposeBy(1)} />
                     </div>
                 {:else if document?.kind == 'pdf' && pdfPages > 1}
-                    <div role="group" aria-label="Pages" class="mr-3 flex items-center gap-1.5">
+                    <div role="group" aria-label="Pages" class="ml-auto flex items-center gap-1.5 sm:ml-0 sm:mr-3">
                         <button type="button" class="{outlineButton} w-9 px-0" aria-label="Previous page" disabled={pdfPage == 1} onclick={() => pdfPage--}><Fa icon={faChevronLeft} size="xs" /></button>
                         <span class="min-w-[96px] text-center text-sm text-gray-700">Page {pdfPage} of {pdfPages}</span>
                         <button type="button" class="{outlineButton} w-9 px-0" aria-label="Next page" disabled={pdfPage == pdfPages} onclick={() => pdfPage++}><Fa icon={faChevronRight} size="xs" /></button>

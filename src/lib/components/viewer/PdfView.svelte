@@ -24,7 +24,7 @@
         if (!pdf || !width) return;
         let rendering: RenderTask | undefined;
         let cancelled = false;
-        renderPage(pdf, page, Math.min(width - 48, 880)).then(task => {
+        renderPage(pdf, page, Math.min(width, 880)).then(task => {
             rendering = task;
             task.promise.catch(() => {}); // cancelled: a newer page or size replaced it
             if (cancelled) task.cancel();
@@ -52,9 +52,12 @@
     }
 </script>
 
-<div bind:clientWidth={width} class="flex justify-center bg-gray-50 px-6 py-8">
-    {#if error}
-        <p class="text-sm text-gray-600">Brontosound can't show this PDF: {error}</p>
-    {/if}
-    <canvas bind:this={canvas} class="max-w-full border border-gray-200 bg-white" class:hidden={!pdf}></canvas>
+<!-- Framed from `sm` up, edge to edge on phones -->
+<div class="bg-gray-50 sm:px-6 sm:py-8">
+    <div bind:clientWidth={width} class="flex justify-center">
+        {#if error}
+            <p class="px-4 py-8 text-sm text-gray-600 sm:p-0">Brontosound can't show this PDF: {error}</p>
+        {/if}
+        <canvas bind:this={canvas} class="max-w-full bg-white sm:border sm:border-gray-200" class:hidden={!pdf}></canvas>
+    </div>
 </div>

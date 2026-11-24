@@ -8,7 +8,7 @@ import { chartKey } from '$lib/chords/chordChart';
 import { bandApi } from '$lib/bandApi';
 
 /**
- * The song page's state: the folder being browsed, the file in the viewer, the file in the player, the pins,
+ * The song page's state: the folder being browsed, the file in the viewer, what the player plays, the pins,
  * and the changes made from the page: uploads, deletions, text edits.
  * Pinned files open with the page; with nothing pinned, the first document and the first audio file do.
  */
@@ -20,8 +20,8 @@ export class SongPageState {
     viewerFile = $state.raw<SongFile | null>(null);
     document = $state.raw<SongDocument | null>(null); // the viewer file, once loaded
     documentError = $state<string | null>(null);
-    playerFile = $state.raw<SongFile | null>(null);
-    playChart = $state(false); // the chart in the viewer drives the player, rather than the player file
+    playerSource = $state.raw<PlayerSource | null>(null); // one at a time: an audio or MIDI file, or a chart's track
+    autoplay = $state(false); // play the player source once it loads
     transpose = $state(0); // the chart's key, in semitones
     pins = $state.raw<SongPins>({ pinnedDocument: null, pinnedAudio: null });
     syncing = $state(false);
@@ -29,9 +29,9 @@ export class SongPageState {
     editing = $state(false); // the viewer file is open in the text editor
     unsavedText = $state(false); // in the editor
 
-    fileSource = $derived<PlayerSource | null>(this.playerFile && { kind: 'file', file: this.playerFile });
+    playerFile = $derived(this.playerSource?.kind == 'file' ? this.playerSource.file : null);
     chartSource = $derived(chartSourceOf(this.document)); // the chart in the viewer, when it has bars to play
-    chartIsPlaying = $derived(!!this.chartSource && (this.playChart || !this.playerFile));
+    chartInPlayer = $derived(this.playerSource?.kind == 'chart' && this.playerSource.file.path == this.viewerFile?.path);
 
     constructor(private songId: number, rootFiles: SongFile[], folderError: string | null, pins: SongPins) {
         this.files = rootFiles;
@@ -41,7 +41,8 @@ export class SongPageState {
         const known = (path: string) => rootFiles.find(file => file.path == path) ?? fileAtPath(path);
         const defaults = defaultFiles(rootFiles);
         const document = pins.pinnedDocument ? known(pins.pinnedDocument) : defaults.document;
-        this.playerFile = pins.pinnedAudio ? known(pins.pinnedAudio) : defaults.audio ?? null;
+        const audio = pins.pinnedAudio ? known(pins.pinnedAudio) : defaults.audio;
+        if (audio) this.playerSource = { kind: 'file', file: audio };
         if (document) this.openInViewer(document);
     }
 
@@ -51,17 +52,24 @@ export class SongPageState {
         if (slot == 'folder') {
             this.browse(file.path);
         } else if (slot == 'player') {
-            this.playerFile = file;
-            this.playChart = false;
+            this.play({ kind: 'file', file }, false);
         } else if (this.leaveEditor()) {
             this.openInViewer(file);
         }
     }
 
-    /** Release the audio or MIDI file: the player keeps the chart in the viewer, if any, or closes */
-    closePlayerFile() {
-        this.playerFile = null;
-        this.playChart = false;
+    /** Put the chart in the viewer in the player, replacing what was there, and play it */
+    playChart() {
+        if (this.chartSource) this.play(this.chartSource, true);
+    }
+
+    closePlayer() {
+        this.playerSource = null;
+    }
+
+    private play(source: PlayerSource, autoplay: boolean) {
+        this.playerSource = source;
+        this.autoplay = autoplay;
     }
 
     async browse(folderPath: string) {
@@ -79,7 +87,6 @@ export class SongPageState {
         this.viewerFile = file;
         this.editing = false;
         this.transpose = 0;
-        this.playChart = false;
         return this.loadDocument(file);
     }
 
@@ -140,7 +147,7 @@ export class SongPageState {
             this.document = null;
             this.editing = this.unsavedText = false;
         }
-        if (this.playerFile?.path == file.path) this.closePlayerFile();
+        if (this.playerSource?.file.path == file.path) this.closePlayer();
         await this.browse(this.folderPath);
     }
 

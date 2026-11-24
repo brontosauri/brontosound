@@ -22,8 +22,8 @@
     }));
 
     let position = $state(0); // in the player, seconds
-    let activeBar = $derived(page.chartIsPlaying && page.chartSource?.kind == 'chart'
-        ? Math.floor(position / secondsPerBar(page.chartSource.timeline))
+    let activeBar = $derived(page.chartInPlayer && page.playerSource?.kind == 'chart'
+        ? Math.floor(position / secondsPerBar(page.playerSource.timeline))
         : null);
 
     const isSame = (a: SongFile | null, b: SongFile) => a?.path == b.path;
@@ -32,24 +32,26 @@
 <SongHeader songId={song.id} initialTitle={song.title} initialArtist={song.artist ?? ''} tags={song.tags.map((tag: { name: string }) => tag.name)} allTags={data.allTags}
     {editable} syncing={page.syncing} onSync={() => page.sync()} />
 
-<div class="flex flex-col gap-6">
+<!-- Edge to edge on phones -->
+<div class="flex flex-col gap-6 max-sm:-mx-6">
     <FolderBrowser {editable} rootName={song.storedDirName} folderPath={page.folderPath} files={page.files} error={page.folderError}
         storagePath={pathJoin('', song.songsFolder, song.storedDirName, page.folderPath).replace(/\/$/, '')} uploads={page.uploads.filter(upload => upload.folder == page.folderPath)}
         isInViewer={file => isSame(page.viewerFile, file)}
-        isInPlayer={file => isSame(page.chartIsPlaying ? page.viewerFile : page.playerFile, file)}
+        isInPlayer={file => isSame(page.playerSource?.file ?? null, file)}
         isPinned={file => page.isPinned(file)}
         onBrowse={path => page.browse(path)} onOpen={file => page.open(file)}
         onUpload={files => page.upload(files)} onDismissUpload={upload => page.dismissUpload(upload)} />
 
     <DocumentViewer {editable} songId={song.id} file={page.viewerFile} document={page.document} error={page.documentError}
         pinned={!!page.viewerFile && page.pins.pinnedDocument == page.viewerFile.path} onTogglePin={() => page.togglePin('pinnedDocument')}
+        playable={!!page.chartSource} inPlayer={page.chartInPlayer} onPlay={() => page.playChart()}
         bind:transpose={page.transpose} {activeBar}
         bind:editing={page.editing} bind:unsavedText={page.unsavedText} onCloseEditor={() => page.leaveEditor()}
         onSaveText={text => page.saveText(page.viewerFile!, text)} onDelete={() => page.deleteFile(page.viewerFile!)} />
 </div>
 
-{#if page.fileSource || page.chartSource}
-    <PlayerBar {editable} songId={song.id} fileSource={page.fileSource} chartSource={page.chartSource} bind:playChart={page.playChart} bind:transpose={page.transpose}
+{#if page.playerSource}
+    <PlayerBar {editable} songId={song.id} source={page.playerSource} autoplay={page.autoplay} chartInViewer={page.chartInPlayer} bind:transpose={page.transpose}
         bind:position pinned={!!page.playerFile && page.pins.pinnedAudio == page.playerFile.path} soundfonts={data.soundfonts} onTogglePin={() => page.togglePin('pinnedAudio')}
-        onCloseFile={() => page.closePlayerFile()} onDeleteFile={() => page.deleteFile(page.playerFile!)} />
+        onClose={() => page.closePlayer()} onDeleteFile={() => page.deleteFile(page.playerFile!)} />
 {/if}
