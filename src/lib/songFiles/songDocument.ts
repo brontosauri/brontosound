@@ -9,7 +9,7 @@ import { songFileUrl, type SongFile } from './songFile';
 
 /** A file opened in the viewer, ready to show */
 export type SongDocument = { file: SongFile, typeLabel: string } & (
-    | { kind: 'chart', chart: ChordChart, timeline: ChartTimeline }
+    | { kind: 'chart', chart: ChordChart, timeline: ChartTimeline | null } // none for ChordPro: it doesn't say how long a line lasts
     | { kind: 'iReal', song: IRealSong, timeline: ChartTimeline }
     | { kind: 'markdown', text: string }
     | { kind: 'text', text: string }
@@ -19,7 +19,7 @@ export type SongDocument = { file: SongFile, typeLabel: string } & (
 
 /** A chart the player can follow: one with bars */
 export function playableChart(document: SongDocument | null): (SongDocument & { timeline: ChartTimeline }) | null {
-    return document && 'timeline' in document && document.timeline.bars > 0 ? document : null;
+    return document && 'timeline' in document && document.timeline && document.timeline.bars > 0 ? { ...document, timeline: document.timeline } : null;
 }
 
 export async function openDocument(songId: number, file: SongFile): Promise<SongDocument> {
@@ -27,7 +27,7 @@ export async function openDocument(songId: number, file: SongFile): Promise<Song
     const url = songFileUrl(songId, file);
 
     switch (fileKind(file)) {
-        case 'chordpro': return chartDocument(file, typeLabel, parseChordPro(await fetchText(url)));
+        case 'chordpro': return { file, typeLabel, kind: 'chart', chart: parseChordPro(await fetchText(url)), timeline: null };
         case 'onsong': return chartDocument(file, typeLabel, parseOnSong(await fetchText(url)));
         case 'markdown': return { file, typeLabel, kind: 'markdown', text: await fetchText(url) };
         case 'text': return readTextDocument(file, typeLabel, await fetchText(url));

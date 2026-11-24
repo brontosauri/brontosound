@@ -11,7 +11,7 @@
      */
     let { chart, timeline, transpose, activeBar }: {
         chart: ChordChart,
-        timeline: ChartTimeline,
+        timeline: ChartTimeline | null, // none when the chart doesn't play
         transpose: number, // semitones
         activeBar: number | null, // the bar the player is on, when the chart drives it
     } = $props();
@@ -26,7 +26,7 @@
         chart.meta.time,
     ].filter(Boolean).join(' · '));
 
-    const isActive = (item: object) => activeBar !== null && isInRange(activeBar, timeline.barsOf.get(item));
+    const isActive = (item: object) => activeBar !== null && isInRange(activeBar, timeline?.barsOf.get(item));
     const COMMENT_STYLES: Record<string, string> = {
         normal: 'bg-gray-100 text-gray-700',
         italic: 'text-gray-600',
@@ -42,7 +42,7 @@
     {:else if line.kind == 'tab'}
         <pre class="font-mono text-[15px] leading-snug text-gray-900">{line.text}</pre>
     {:else if line.kind == 'grid'}
-        <ChordGrid row={line.row} transpose={transposeChord} isActive={isActive} />
+        <ChordGrid row={line.row} transpose={transposeChord} />
     {:else}
         <div class="h-4"></div>
     {/if}
@@ -59,7 +59,7 @@
     {#each chart.sections as section}
         {#if section.recalled}
             <!-- ChordPro prints a chorus recall as a comment -->
-            <p class="w-fit rounded px-2 py-0.5 text-sm {isActive(section) ? 'bg-primary-200 text-gray-900' : 'bg-gray-100 text-gray-700'}">{section.label ?? 'Chorus'}</p>
+            <p class="w-fit rounded px-2 py-0.5 text-sm bg-gray-100 text-gray-700">{section.label ?? 'Chorus'}</p>
         {:else}
             <div class="flex flex-col gap-1">
                 {#if section.label}<div class="mb-1 text-sm font-medium text-gray-500">{section.label}</div>{/if}

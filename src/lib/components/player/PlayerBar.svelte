@@ -3,12 +3,14 @@
     import Fa from 'svelte-fa';
     import { untrack } from 'svelte';
     import type { PlayerSource } from '$lib/player/loadEngine';
-    import { formatTime, PlayerState } from '$lib/player/playerState.svelte';
+    import { PlayerState } from '$lib/player/playerState.svelte';
+    import { formatTime, type SnapUnit } from '$lib/player/snap';
     import { songFileUrl } from '$lib/songFiles/songFile';
     import type { SoundfontChoice } from '$lib/soundfonts';
     import BottomSheet from '../controls/BottomSheet.svelte';
     import DeleteConfirmRow from '../controls/DeleteConfirmRow.svelte';
     import PinButton from '../controls/PinButton.svelte';
+    import SegmentedControl from '../controls/SegmentedControl.svelte';
     import ToggleButton from '../controls/ToggleButton.svelte';
     import PlayerExtras from './PlayerExtras.svelte';
     import PlayerSettings from './PlayerSettings.svelte';
@@ -17,7 +19,7 @@
 
     /**
      * The player, fixed to the bottom of the screen, made for practising (docs/songPage.md):
-     * Space plays and pauses, every play starts from the start point, arrows move 5 s (a bar on a chart).
+     * Space plays and pauses, every play starts from the start point, which snaps to beats, bars or sections; so do arrows.
      * Practice settings, pin and delete show with Options. On phones it's a single bar that opens a sheet with every control.
      */
     let { editable, songId, source, autoplay, chartInViewer, transpose = $bindable(), position = $bindable(), pinned, soundfonts, onTogglePin, onClose, onDeleteFile }: {
@@ -45,7 +47,7 @@
 
     $effect(() => { position = transport.position; });
 
-    let startLabel = $derived(transport.startPoint === null ? '' : player.isChart ? `Bar ${player.barOf(transport.startPoint)}` : formatTime(transport.startPoint));
+    let startLabel = $derived(transport.startPoint === null ? '' : player.snap.label(transport.startPoint));
     let playedPercent = $derived(transport.duration ? transport.position / transport.duration * 100 : 0);
     let playLabel = $derived(transport.playing ? 'Pause (Space)' : 'Play (Space)');
     let backLabel = $derived(transport.startPoint === null ? 'Go to the beginning' : 'Go to the start point');
@@ -54,8 +56,8 @@
     function onKeydown(event: KeyboardEvent) {
         if (!player.loaded || isTyping(event) || event.ctrlKey || event.metaKey || event.altKey) return;
         if (event.code == 'Space') transport.togglePlay();
-        else if (event.key == 'ArrowLeft') transport.seekBy(-player.step);
-        else if (event.key == 'ArrowRight') transport.seekBy(player.step);
+        else if (event.key == 'ArrowLeft') transport.jumpTo(player.snap.step(transport.target, -1));
+        else if (event.key == 'ArrowRight') transport.jumpTo(player.snap.step(transport.target, 1));
         else return;
         event.preventDefault();
     }
@@ -82,6 +84,7 @@
     const outline = 'border border-gray-300 bg-white text-gray-900 hover:bg-gray-50';
     const sheetRow = 'min-h-[64px] justify-between border-b border-gray-200 py-2';
     const muted = 'text-gray-500 hover:bg-gray-100 hover:text-gray-900';
+    const unitNames: Record<SnapUnit, string> = { none: 'None', beat: 'Beat', bar: 'Bar', section: 'Section' };
 </script>
 
 <svelte:window onkeydown={onKeydown} onkeyup={onKeyup} />
@@ -102,7 +105,7 @@
 {#snippet timeline()}
     {#if player.view}
         <Timeline view={player.view} duration={transport.duration} position={transport.position} startPoint={transport.startPoint} {startLabel}
-            loopRange={transport.loop ? transport.loopRange : null} snap={player.snap}
+            loopRange={transport.loop ? transport.loopRange : null} waitingFor={transport.waitingFor} snap={player.snap}
             onSetStart={time => transport.setStartPoint(time)} onSetLoop={(from, to) => transport.setLoop(from, to)} />
     {:else if player.loadError}
         <p class="flex-[1_1_360px] text-sm text-gray-600">
@@ -114,15 +117,6 @@
     {/if}
 {/snippet}
 
-{#snippet startPoint(layout = '')}
-    {#if transport.startPoint !== null}
-        <span class="{layout} inline-flex h-9 shrink-0 whitespace-nowrap items-center gap-1 rounded-lg border border-primary-300 bg-primary-100 pl-3 pr-1 text-sm font-medium text-primary-900">
-            Plays from {player.label(transport.startPoint)}
-            <button type="button" class="{iconButton} h-7 w-7 rounded-md" onclick={() => transport.clearStartPoint()} aria-label="Play from the start" title="Play from the start"><Fa icon={faXmark} size="sm" /></button>
-        </span>
-    {/if}
-{/snippet}
-
 {#snippet optionsButton(layout: string)}
     <ToggleButton on={optionsOpen} onclick={() => optionsOpen = !optionsOpen} class="relative shrink-0 gap-2 text-sm {layout}">
         <Fa icon={faSliders} size="sm" />Options
@@ -130,6 +124,12 @@
             <span class="absolute -right-1 -top-1 h-2.5 w-2.5 rounded-full border-2 border-white bg-primary-700"><span class="sr-only">, a setting is changed</span></span>
         {/if}
     </ToggleButton>
+{/snippet}
+
+{#snippet snapTo(layout = '')}
+    {#if player.snapUnits.length}
+        <SegmentedControl label="Snap to" options={player.snapUnits.map(unit => ({ value: unit, name: unitNames[unit] }))} bind:value={player.snapUnit} class={layout} />
+    {/if}
 {/snippet}
 
 {#snippet closeButton(layout: string)}
@@ -166,7 +166,6 @@
             </div>
             {@render timeline()}
             <div class="flex shrink-0 items-center gap-2">
-                {@render startPoint()}
                 <ToggleButton on={transport.loop} onclick={() => transport.loop = !transport.loop} class="h-[42px] shrink-0 gap-2 px-4 text-sm"><Fa icon={faRepeat} size="sm" />Loop</ToggleButton>
                 {@render optionsButton('h-[42px] px-4')}
                 {@render closeButton('ml-2 h-[42px] w-[42px]')}
@@ -175,7 +174,8 @@
 
         {#if optionsOpen}
             <div class="flex flex-wrap items-center gap-x-8 gap-y-3">
-                <div class="flex flex-wrap items-center gap-x-6 gap-y-2">
+                <div class="flex flex-wrap items-center gap-x-8 gap-y-2">
+                    {@render snapTo()}
                     <PlayerExtras {player} soundfonts={soundfonts.soundfonts} bind:soundfont />
                 </div>
                 <div class="ml-auto flex flex-wrap items-center gap-x-6 gap-y-2">
@@ -226,10 +226,10 @@
             <ToggleButton on={transport.loop} onclick={() => transport.loop = !transport.loop} class="h-11 shrink-0 gap-2 text-sm"><Fa icon={faRepeat} size="sm" />Loop</ToggleButton>
             {@render optionsButton('h-11')}
         </div>
-        {@render startPoint('mt-4 self-center')}
 
         {#if optionsOpen}
             <div class="mt-5 flex flex-col border-t border-gray-200">
+                {@render snapTo(sheetRow)}
                 <PlayerSettings {player} {source} {chartInViewer} bind:transpose itemClass={sheetRow} />
                 <PlayerExtras {player} soundfonts={soundfonts.soundfonts} bind:soundfont itemClass={sheetRow} />
             </div>

@@ -1,6 +1,7 @@
 import { secondsPerBar } from '$lib/chords/chartTimeline';
 import type { TimelineView } from '$lib/components/player/Timeline.svelte';
 import { loadEngine, type LoadedEngine, type PlayerSource } from './loadEngine';
+import { chartGrid, defaultSnapUnit, Snap, snapUnits, type SnapGrid, type SnapUnit } from './snap';
 import { Transport } from './transport.svelte';
 
 /**
@@ -8,7 +9,7 @@ import { Transport } from './transport.svelte';
  * and the practice settings, back to the file's own for every file. Create it while a component initialises.
  */
 export class PlayerState {
-    readonly transport = new Transport();
+    readonly transport = new Transport(time => this.snap.boundary(time));
     loaded = $state.raw<LoadedEngine | null>(null);
     loadError = $state<string | null>(null);
 
@@ -19,13 +20,18 @@ export class PlayerState {
     tracksOn = $state<boolean[]>([]); // MIDI files
     click = $state(true); // charts
     countIn = $state(true);
+    snapUnit = $state<SnapUnit>('none');
 
     isChart = $derived(this.loaded?.kind == 'chart');
     usesTempo = $derived(this.loaded?.kind == 'midi' || this.loaded?.kind == 'chart');
     barSeconds = $derived(this.loaded?.kind == 'chart' ? secondsPerBar(this.loaded.timeline) : 0);
+    grid = $derived(this.loaded && snapGrid(this.loaded));
+    snapUnits = $derived(snapUnits(this.grid));
+    /** Where clicks, drags and arrows land on the timeline, and how those times read */
+    snap = $derived(new Snap(this.grid, this.snapUnit));
     /** A practice setting is off the source's own */
     changed = $derived(!!this.loaded && (this.speed != 100 || this.semitones != 0 || this.cents != 0 || this.tempo != baseTempo(this.loaded)
-        || this.tracksOn.includes(false) || (this.isChart && !(this.click && this.countIn))));
+        || this.tracksOn.includes(false) || (this.isChart && !(this.click && this.countIn)) || this.snapUnit != defaultSnapUnit(this.grid)));
 
     view = $derived.by((): TimelineView | null => {
         const loaded = this.loaded;
@@ -75,22 +81,9 @@ export class PlayerState {
         });
     }
 
-    /** Arrows move 5 s, or a bar on a chart */
-    get step(): number {
-        return this.isChart ? this.barSeconds : 5;
-    }
-
     barOf(seconds: number): number {
         return Math.floor(seconds / this.barSeconds) + 1;
     }
-
-    /** A time as the player shows it: bars on a chart */
-    label(seconds: number): string {
-        return this.isChart ? `bar ${this.barOf(seconds)}` : formatTime(seconds);
-    }
-
-    /** Charts start on a bar; files on the tenth of a second */
-    snap = (time: number): number => this.isChart ? Math.floor(time / this.barSeconds) * this.barSeconds : Math.round(time * 10) / 10;
 
     private resetSettings(engine: LoadedEngine) {
         this.speed = 100;
@@ -98,9 +91,11 @@ export class PlayerState {
         this.cents = 0;
         this.tempo = baseTempo(engine);
         this.tracksOn = engine.kind == 'midi' ? engine.engine.tracks.map(() => true) : [];
+        this.snapUnit = defaultSnapUnit(snapGrid(engine));
     }
 }
 
 const baseTempo = (engine: LoadedEngine) => engine.kind == 'midi' ? engine.engine.tempo : engine.kind == 'chart' ? engine.timeline.tempo : 120;
 
-export const formatTime = (seconds: number) => `${Math.floor(seconds / 60)}:${String(Math.floor(seconds % 60)).padStart(2, '0')}`;
+/** Audio files have no beats to snap to */
+const snapGrid = (engine: LoadedEngine): SnapGrid | null => engine.kind == 'chart' ? chartGrid(engine.timeline) : engine.kind == 'midi' ? engine.engine.grid : null;

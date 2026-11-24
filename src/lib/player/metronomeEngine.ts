@@ -12,7 +12,7 @@ export class MetronomeEngine implements PlaybackEngine {
     readonly duration: number;
     private context = audioContext();
     private clock = new MediaClock(this.context);
-    private scheduler = new LookaheadScheduler(this.context, this.clock, (from, to) => this.schedule(from, to));
+    private scheduler = new LookaheadScheduler(this.context, this.clock, (from, to, timeOf) => this.schedule(from, to, timeOf));
     private beat: number; // seconds per beat at the chart's tempo
     private rate = 1;
     private clicks = new Set<OscillatorNode>(); // scheduled, to silence them on pause
@@ -41,6 +41,10 @@ export class MetronomeEngine implements PlaybackEngine {
         this.scheduler.start(to);
     }
 
+    jumpAt(at: number, to: number) {
+        this.clock.jumpAt(at, to);
+    }
+
     pause() {
         this.scheduler.stop();
         this.clock.stop();
@@ -60,10 +64,10 @@ export class MetronomeEngine implements PlaybackEngine {
     }
 
     /** Click on every beat between `from` and `to` (song time), accenting the first of each bar */
-    private schedule(from: number, to: number) {
+    private schedule(from: number, to: number, contextTimeOf: (songTime: number) => number) {
         if (!this.click) return;
         for (let beat = Math.ceil(from / this.beat - 1e-6); beat * this.beat < to; beat++) {
-            this.playClick(this.clock.contextTimeOf(beat * this.beat), beat % this.timeline.beatsPerBar == 0);
+            this.playClick(contextTimeOf(beat * this.beat), beat % this.timeline.beatsPerBar == 0);
         }
     }
 

@@ -3,6 +3,7 @@ import { audioContext, fetchArrayBuffer, resumeAudio, type PlaybackEngine } from
 import { LookaheadScheduler, MediaClock } from './mediaClock';
 import { MidiSynth, type MidiInstruments } from './midiSynth';
 import { Sampler } from './sampler';
+import type { SnapGrid } from './snap';
 
 interface MidiNote {
     midi: number;
@@ -25,9 +26,10 @@ export class MidiEngine implements PlaybackEngine {
     readonly tracks: MidiTrack[];
     readonly duration: number;
     readonly tempo: number; // the file's first tempo, bpm
+    readonly grid: SnapGrid;
     private context = audioContext();
     private clock = new MediaClock(this.context);
-    private scheduler = new LookaheadScheduler(this.context, this.clock, (from, to) => this.schedule(from, to));
+    private scheduler = new LookaheadScheduler(this.context, this.clock, (from, to, timeOf) => this.schedule(from, to, timeOf));
     private synth = new MidiSynth(this.context);
     private instruments: MidiInstruments = this.synth;
     private soundfontRequest = 0; // the latest wins
@@ -43,6 +45,7 @@ export class MidiEngine implements PlaybackEngine {
     private constructor(midi: Midi) {
         this.duration = midi.duration;
         this.tempo = Math.round(midi.header.tempos[0]?.bpm ?? 120);
+        this.grid = midiGrid(midi.header, midi.duration);
         this.tracks = midi.tracks
             .filter(track => track.notes.length > 0)
             .map((track, i) => ({
@@ -70,6 +73,10 @@ export class MidiEngine implements PlaybackEngine {
 
     seek(to: number) {
         this.play(to);
+    }
+
+    jumpAt(at: number, to: number) {
+        this.clock.jumpAt(at, to);
     }
 
     pause() {
@@ -111,13 +118,13 @@ export class MidiEngine implements PlaybackEngine {
     }
 
     /** Play the notes starting between `from` and `to` (song time) */
-    private schedule(from: number, to: number) {
+    private schedule(from: number, to: number, contextTimeOf: (songTime: number) => number) {
         this.tracks.forEach((track, i) => {
             for (const note of notesStartingBetween(track.notes, from, to)) {
                 const synthNote = {
                     midi: track.percussion ? note.midi : note.midi + this.semitones,
                     velocity: note.velocity,
-                    start: this.clock.contextTimeOf(note.time),
+                    start: contextTimeOf(note.time),
                     duration: note.duration / this.rate,
                 };
                 if (track.percussion) this.instruments.playDrum(this.outputs[i], synthNote);
@@ -138,4 +145,20 @@ function notesStartingBetween(notes: MidiNote[], from: number, to: number): Midi
     const result: MidiNote[] = [];
     for (let i = low; i < notes.length && notes[i].time < to; i++) result.push(notes[i]);
     return result;
+}
+
+/** Beats and bars from the file's time signatures (4/4 without), each taking effect at the next bar */
+function midiGrid(header: Midi['header'], duration: number): SnapGrid {
+    const signatures = header.timeSignatures.length ? header.timeSignatures : [{ ticks: 0, timeSignature: [4, 4] }];
+    const grid: SnapGrid = { duration, beats: [], bars: [], sections: [] };
+    let signature = 0;
+    for (let tick = 0; header.ticksToSeconds(tick) < duration;) {
+        while (signatures[signature + 1]?.ticks <= tick) signature++;
+        const [beatsPerBar = 4, beatValue = 4] = signatures[signature].timeSignature.map(n => n || 4);
+        const beatTicks = header.ppq * 4 / beatValue;
+        grid.bars.push(header.ticksToSeconds(tick));
+        for (let beat = 0; beat < beatsPerBar; beat++) grid.beats.push(header.ticksToSeconds(tick + beat * beatTicks));
+        tick += beatsPerBar * beatTicks;
+    }
+    return grid;
 }

@@ -8,6 +8,8 @@ export interface PlaybackEngine {
     play(from: number): void;
     /** Jump while playing, without a count-in */
     seek(to: number): void;
+    /** Jump while playing once playback reaches `at`, on time: engines that play beats */
+    jumpAt?(at: number, to: number): void;
     pause(): void;
     setSpeed(rate: number): void; // 1 = the song's own tempo
     setTranspose(semitones: number): void; // fractions of a semitone for fine pitch

@@ -12,7 +12,7 @@ One document and one audio file can be pinned (`Song.pinnedDocument`, `Song.pinn
 
 | Kind | Extensions | Opens in |
 | --- | --- | --- |
-| ChordPro | `.cho .chopro .chordpro .crd .pro` | viewer + player |
+| ChordPro | `.cho .chopro .chordpro .crd .pro` | viewer |
 | OnSong | `.onsong` | viewer + player |
 | iReal Pro | `irealb://` links in `.html` (iReal Pro's export) or `.txt` | viewer + player |
 | Chords over lyrics | `.txt` with two or more chord lines | viewer + player |
@@ -26,11 +26,13 @@ One document and one audio file can be pinned (`Song.pinnedDocument`, `Song.pinn
 
 ## Playing a chart
 
-Charts don't say how long a line lasts, so: a lyrics line lasts one bar per chord (one bar if it has none), grid bars and iReal bars count as written. Tempo and time come from the chart (`{tempo}`, `{time}`), else 120 bpm in 4/4. Repeats and codas are not followed. Key in the player and in the viewer is the same control.
+ChordPro charts don't play: ChordPro doesn't say how long a lyrics line lasts, and a guess one bar off is no use for rehearsing. OnSong and chords over lyrics don't say either, and still play: a lyrics line lasts one bar per chord (one bar if it has none). iReal bars count as written. Tempo and time come from the chart, else 120 bpm in 4/4. Repeats and codas are not followed. Key in the player and in the viewer is the same control.
 
 ## Player
 
-Space plays and pauses. Click the timeline to set a start point: every play starts there. Drag across it to loop a part. Arrows move 5 s (a bar on a chart).
+Space plays and pauses. Click the timeline to set a start point: every play starts there. Click it again to clear it, calling off a jump waiting for it. Drag across it to loop a part. Arrows move 5 s.
+
+**Snap to** (in Options) makes clicks land on the start of the beat, bar or section clicked in, loops end at the end of the last one, and arrows move one of them. While playing, these jumps wait for the unit playing to end, to the sample, as Backline does; meanwhile where they go blinks on the beat (the playhead's mark, and the section), as a launched clip does in a DAW. Charts offer None, Beat, Bar and Section (the default, Bar for a chart with one section); MIDI files None, Beat and Bar (the default), with beats and bars from the file's time signatures, 4/4 without. Audio files hold no beats: none. The start point's label follows the unit; with a mouse, hovering the timeline shows where a click lands.
 
 - Tempo (Speed for audio files), Transpose (semitones, ±12) and Pitch (cents, ±50) can be typed or stepped.
 - Audio files are decoded in memory, so playback starts at once from any point. Speed and pitch change independently through [SoundTouch](https://github.com/cutterbl/SoundTouchJS) (an AudioWorklet), bypassed at the original speed and pitch. Formats the browser can't decode (AIFF outside Safari) can't be played.
@@ -51,7 +53,7 @@ Each instrument is normalised when it loads: its samples are scaled so the loude
 
 - `src/lib/songFiles/`: file kinds by extension, loading a file into a `SongDocument`.
 - `src/lib/chords/`: one parser per format into `ChordChart` (or `IRealSong`), transposition, `chartTimeline.ts` (bars for the player).
-- `src/lib/player/`: one engine per source, behind `PlaybackEngine`; `transport.svelte.ts` holds the practice controls. MIDI notes go to `MidiInstruments`: `sampler.ts` (soundfonts) or `midiSynth.ts`.
+- `src/lib/player/`: one engine per source, behind `PlaybackEngine`; `transport.svelte.ts` holds the practice controls, `snap.ts` the beats, bars and sections they snap to. MIDI notes go to `MidiInstruments`: `sampler.ts` (soundfonts) or `midiSynth.ts`.
 - `src/lib/server/soundfonts.ts`: the soundfonts on offer and the user's pick; `/api/soundfont` remembers it.
 - `src/lib/components/{songFolder,viewer,player}/`, and the page in `src/routes/@[handle]/app/songbook/[songId]/[songSlug]/`.
 - `/api/song/[songId]/folder`, `/file` and `/pins`: files are addressed relative to the song folder and can't leave it. `/file` also takes uploads (POST), saves (PUT) and deletions (DELETE); the request body is the file. adapter-node caps bodies at 512K unless `BODY_SIZE_LIMIT` is set (the Dockerfile sets 200M).

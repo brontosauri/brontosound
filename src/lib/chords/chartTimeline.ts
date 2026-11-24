@@ -1,17 +1,17 @@
 import { isChord } from './chordSymbols';
-import { sectionName, type ChartLine, type ChartSection, type ChordChart } from './chordChart';
+import { sectionName, type ChartLine, type ChordChart } from './chordChart';
 import { iRealBarIndexes, type IRealSong } from './iRealPro';
 
 /**
  * How a chart plays when it drives the player (docs/songPage.md): a count of bars at a tempo,
- * split into named sections, with the bars each line (or grid bar, or iReal cell) covers.
+ * split into named sections, with the bars each line (or iReal cell) covers.
  */
 export interface ChartTimeline {
     tempo: number; // bpm
     beatsPerBar: number;
     bars: number;
     sections: TimelineSection[];
-    barsOf: Map<object, BarRange>; // keyed by chart lines, grid bars, chorus recalls and iReal cells
+    barsOf: Map<object, BarRange>; // keyed by chart lines and iReal cells
 }
 
 export interface TimelineSection {
@@ -29,10 +29,7 @@ const DEFAULT_TEMPO = 120;
 export const secondsPerBar = (timeline: ChartTimeline) => timeline.beatsPerBar * 60 / timeline.tempo;
 export const isInRange = (bar: number, range: BarRange | undefined) => !!range && bar >= range.first && bar < range.first + range.count;
 
-/**
- * A lyrics line lasts one bar per chord, or one bar if it has none: charts don't say more.
- * Grid bars and chorus recalls count as written.
- */
+/** For OnSong and chords over lyrics: a lyrics line lasts one bar per chord, or one bar if it has none. The charts don't say more. */
 export function chordChartTimeline(chart: ChordChart): ChartTimeline {
     const barsOf = new Map<object, BarRange>();
     let nextBar = 0;
@@ -43,10 +40,8 @@ export function chordChartTimeline(chart: ChordChart): ChartTimeline {
 
     const sections = chart.sections.map(section => {
         const first = nextBar;
-        if (section.recalled) take(section, barCount(section.recalled));
         for (const line of section.lines) {
-            if (line.kind == 'grid') line.row.bars.forEach(bar => take(bar, 1));
-            else if (lineBars(line) > 0) take(line, lineBars(line));
+            if (lineBars(line) > 0) take(line, lineBars(line));
         }
         return { name: sectionName(section), bars: { first, count: nextBar - first } };
     });
@@ -61,12 +56,9 @@ export function chordChartTimeline(chart: ChordChart): ChartTimeline {
 }
 
 function lineBars(line: ChartLine): number {
-    if (line.kind == 'grid') return line.row.bars.length;
     if (line.kind != 'lyrics') return 0;
     return Math.max(1, line.segments.filter(segment => segment.chord && isChord(segment.chord)).length);
 }
-
-const barCount = (section: ChartSection) => section.lines.reduce((sum, line) => sum + lineBars(line), 0);
 
 function beatsPerBar(time: string | undefined): number {
     return parseInt(time ?? '') || 4;
