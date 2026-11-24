@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { verbatim } from '$lib/verbatim';
     // What a herd admin can do to one user
     import { enhance } from "$app/forms";
     import { Button, Input, Select } from "flowbite-svelte";
@@ -21,7 +22,7 @@
     <form method="POST" action="?/rename" class="flex items-end gap-2" use:enhance>
         <input type="hidden" name="user" value={user.id} />
         <label class="text-sm font-medium text-gray-900">Handle
-            <Input name="handle" size="sm" class="mt-1 w-40" value={user.handle ?? ''} placeholder="They pick it" required />
+            <Input name="handle" size="sm" class="mt-1 w-40" autocomplete="off" {...verbatim} value={user.handle ?? ''} placeholder="They pick it" required />
         </label>
         <Button type="submit" size="xs" color="light">{user.handle ? 'Rename' : 'Set'}</Button>
     </form>

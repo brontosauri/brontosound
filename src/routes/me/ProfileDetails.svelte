@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { verbatim } from '$lib/verbatim';
     import { Input, Label, Radio, Select, Textarea, Toggle } from "flowbite-svelte";
     import { Visibility } from "$lib/dbEntities/user";
     import { LOCALES } from "$lib/locales";
@@ -19,12 +20,12 @@
     </div>
     <SaveForm action="?/saveDetails">
         <div class="grid gap-4 md:grid-cols-2">
-            <Label>Display name<Input name="name" class="mt-2" value={profile.name} maxlength={100} required /></Label>
+            <Label>Display name<Input name="name" class="mt-2" autocomplete="name" value={profile.name} maxlength={100} required /></Label>
             <Label>Handle
                 {#if profile.handle}
                     <Input class="mt-2" value="@{profile.handle}" disabled />
                 {:else}
-                    <Input name="handle" class="mt-2" placeholder="Pick yours: it can't change later" maxlength={30} />
+                    <Input name="handle" class="mt-2" autocomplete="off" {...verbatim} placeholder="Pick yours: it can't change later" maxlength={30} />
                 {/if}
             </Label>
             <Label>Language and dates<Select name="locale" class="mt-2" items={[{ value: '', name: "The herd's" }, ...LOCALES]} value={profile.locale ?? ''} placeholder="" /></Label>
@@ -47,7 +48,7 @@
             <Label>Instruments<Input name="instruments" class="mt-2" value={profile.instruments} placeholder="Optional" maxlength={100} /></Label>
             <Label>City<Input name="city" class="mt-2" value={profile.city} placeholder="Optional" maxlength={100} /></Label>
         </div>
-        <Label>Website<Input name="website" class="mt-2" value={profile.website} placeholder="Optional: https://…" maxlength={300} /></Label>
+        <Label>Website<Input name="website" class="mt-2" inputmode="url" autocomplete="url" {...verbatim} value={profile.website} placeholder="Optional: https://…" maxlength={300} /></Label>
         <Toggle name="showBands" checked={profile.showBands}>Show my bands on my profile, and me among their public members</Toggle>
     </SaveForm>
 </SettingsCard>

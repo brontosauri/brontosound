@@ -13,7 +13,7 @@
 
 <div class="space-y-3 rounded-lg bg-gray-50 p-4">
     <div class="flex flex-wrap items-end gap-4">
-        <Label class="flex-1">Send a test email to<Input name="testEmailTo" type="email" class="mt-1" value={to} placeholder="Optional: blank only connects" /></Label>
+        <Label class="flex-1">Send a test email to<Input name="testEmailTo" type="email" autocomplete="email" class="mt-1" value={to} placeholder="Optional: blank only connects" /></Label>
         <Button type="submit" color="light" formaction="?/testEmail" formnovalidate>Test connection</Button>
     </div>
     {#if status}<FormStatus {status} />{/if}

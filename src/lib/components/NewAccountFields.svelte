@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { verbatim } from '$lib/verbatim';
     // What everyone picks for a new account (registration.ts): display name, handle and password; and the herd's rules
     import { Checkbox, Input, Label } from "flowbite-svelte";
     import slugify from "slugify";
@@ -17,7 +18,7 @@
 <Label>Handle
     <div class="mt-2 flex">
         <span class="inline-flex items-center rounded-s-lg border border-e-0 border-gray-300 bg-gray-100 px-3 text-sm text-gray-700">@</span>
-        <Input name="handle" class="rounded-s-none" bind:value={handle} oninput={() => handleEdited = true} autocomplete="username" maxlength={30} required />
+        <Input name="handle" class="rounded-s-none" bind:value={handle} oninput={() => handleEdited = true} autocomplete="username" {...verbatim} maxlength={30} required />
     </div>
     <p class="mt-1 text-[13px] font-normal text-gray-500">You sign in with it, and it's your public address, at /@{handle || 'handle'}. People and bands share these names, and a handle can't change later.</p>
 </Label>

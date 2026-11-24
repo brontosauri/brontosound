@@ -35,7 +35,7 @@
 </script>
 
 <form class="relative flex gap-2" onsubmit={submit}>
-    <Input bind:value={query} oninput={() => results = null} placeholder="e.g. Blue Note Milano" aria-label="Venue name or address" required />
+    <Input type="search" bind:value={query} oninput={() => results = null} placeholder="e.g. Blue Note Milano" aria-label="Venue name or address" required />
     <Button type="submit" disabled={searching}>Search</Button>
 
     {#if results}

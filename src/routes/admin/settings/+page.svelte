@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { verbatim } from '$lib/verbatim';
     import { enhance } from "$app/forms";
     import { Button, Input, Label, Table, TableBody, TableBodyCell, TableBodyRow } from "flowbite-svelte";
     import SaveForm from "$lib/components/settings/SaveForm.svelte";
@@ -52,7 +53,7 @@
         <SaveForm action="?/addSoundfont" label="Add soundfont" done="Added">
             <div class="grid gap-4 md:grid-cols-[1fr_2fr]">
                 <Label>Name<Input name="name" class="mt-2" placeholder="Upright piano" required /></Label>
-                <Label>Address<Input name="url" class="mt-2" placeholder="https://fonts.example/upright/" required /></Label>
+                <Label>Address<Input name="url" type="url" class="mt-2" {...verbatim} placeholder="https://fonts.example/upright/" required /></Label>
             </div>
         </SaveForm>
     </SettingsCard>

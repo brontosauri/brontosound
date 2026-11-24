@@ -1,4 +1,5 @@
 <script>
+  import { verbatim } from '$lib/verbatim';
   import { Card, Avatar, Button, Alert, Input, Label } from 'flowbite-svelte';
   import { page } from "$app/state"
   import SignIn from './SignIn.svelte';
@@ -71,7 +72,7 @@
         <svelte:fragment slot="credentials">
           <div>
             <Label for="signInEmail" class="mb-2">Email or handle</Label>
-            <Input id="signInEmail" name="email" type="text" autocomplete="username" required />
+            <Input id="signInEmail" name="email" type="text" inputmode="email" autocomplete="username" {...verbatim} required />
           </div>
           <div>
             <Label for="signInPassword" class="mb-2">Password</Label>

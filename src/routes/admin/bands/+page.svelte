@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { verbatim } from '$lib/verbatim';
     import { formatDate } from '$lib/dates';
     import { enhance } from "$app/forms";
     import { Alert, Badge, Button, Input, Select, Table, TableBody, TableBodyCell, TableBodyRow, TableHead, TableHeadCell } from "flowbite-svelte";
@@ -22,7 +23,7 @@
 {/if}
 
 <div class="mb-4 flex flex-wrap gap-4">
-    <Input class="max-w-sm" bind:value={search} placeholder="Search by name or handle" />
+    <Input type="search" class="max-w-sm" bind:value={search} placeholder="Search by name or handle" />
     <Select class="w-48" items={filters} bind:value={filter} placeholder="" />
 </div>
 
@@ -55,7 +56,7 @@
                         <div class="flex flex-wrap items-end gap-6 py-2">
                             <form method="POST" action="?/rename" class="flex items-end gap-2" use:enhance>
                                 <input type="hidden" name="band" value={band.id} />
-                                <label class="text-sm font-medium text-gray-900">Handle<Input name="handle" size="sm" class="mt-1 w-44" value={band.handle} required /></label>
+                                <label class="text-sm font-medium text-gray-900">Handle<Input name="handle" size="sm" class="mt-1 w-44" autocomplete="off" {...verbatim} value={band.handle} required /></label>
                                 <Button type="submit" size="xs" color="light">Rename</Button>
                             </form>
                             <form method="POST" action={band.suspended ? '?/restore' : '?/suspend'} use:enhance>
@@ -64,7 +65,7 @@
                             </form>
                             <form method="POST" action="?/delete" class="flex items-end gap-2" use:enhance>
                                 <input type="hidden" name="band" value={band.id} />
-                                <label class="text-sm font-medium text-gray-900">To delete, type its handle<Input name="confirmation" size="sm" class="mt-1 w-44" placeholder={band.handle} required /></label>
+                                <label class="text-sm font-medium text-gray-900">To delete, type its handle<Input name="confirmation" size="sm" class="mt-1 w-44" autocomplete="off" {...verbatim} placeholder={band.handle} required /></label>
                                 <Button type="submit" size="xs" color="red">Delete permanently</Button>
                             </form>
                         </div>

@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { verbatim } from '$lib/verbatim';
     import { enhance } from "$app/forms";
     import { Button, Checkbox, Input, Label, Radio, Textarea } from "flowbite-svelte";
     import { BandStorage } from "$lib/dbEntities/band";
@@ -55,7 +56,7 @@
                 <Label>City<Input name="city" class="mt-2" value={data.profile.city} placeholder="Optional" disabled={!owner} /></Label>
                 <Label>Public email<Input name="publicEmail" type="email" class="mt-2" value={data.profile.publicEmail} placeholder="Optional" disabled={!owner} /></Label>
             </div>
-            <Label>Links, one per line<Textarea name="links" class="mt-2" rows={3} value={data.profile.links.join('\n')} placeholder="https://…" disabled={!owner} /></Label>
+            <Label>Links, one per line<Textarea name="links" class="mt-2" rows={3} {...verbatim} value={data.profile.links.join('\n')} placeholder="https://…" disabled={!owner} /></Label>
             <Checkbox name="showGigs" checked={data.profile.showGigs} disabled={!owner}>Show upcoming gigs: date, venue and city of confirmed gigs</Checkbox>
             <Checkbox name="showMembers" checked={data.profile.showMembers} disabled={!owner}>Show members whose own profile allows it</Checkbox>
         </SaveForm>
@@ -79,11 +80,11 @@
                 {/if}
             {:else}
                 <div class="grid gap-4 md:grid-cols-2">
-                    <Label>Server<Input name="webdavServer" class="mt-2" value={data.settings.webdavServer} placeholder="https://cloud.example.com/remote.php/dav/files/band" disabled={!owner} required /></Label>
-                    <Label>Songs folder<Input name="webdavSongsFolder" class="mt-2" value={data.settings.webdavSongsFolder} disabled={!owner} required /></Label>
+                    <Label>Server<Input name="webdavServer" type="url" class="mt-2" {...verbatim} value={data.settings.webdavServer} placeholder="https://cloud.example.com/remote.php/dav/files/band" disabled={!owner} required /></Label>
+                    <Label>Songs folder<Input name="webdavSongsFolder" class="mt-2" {...verbatim} value={data.settings.webdavSongsFolder} disabled={!owner} required /></Label>
                     {#if owner}
-                        <Label>Username<Input name="webdavUsername" class="mt-2" value={data.settings.webdavUsername} /></Label>
-                        <Label>Password<Input name="webdavPassword" type="password" class="mt-2" autocomplete="off" placeholder="Saved: type to replace it" /></Label>
+                        <Label>Username<Input name="webdavUsername" class="mt-2" autocomplete="off" {...verbatim} value={data.settings.webdavUsername} /></Label>
+                        <Label>Password<Input name="webdavPassword" type="password" class="mt-2" autocomplete="new-password" {...verbatim} placeholder="Saved: type to replace it" /></Label>
                     {/if}
                 </div>
                 {#if owner}
@@ -109,7 +110,7 @@
             <h2 class="text-xl font-bold text-gray-900">Delete the band</h2>
             <p class="text-sm text-gray-700">Deletes the songbook, gigs, venues and contacts of {data.band.name} for all its members, and empties its herd storage. Files on your own WebDAV stay where they are. This can't be undone.</p>
             <div class="flex flex-wrap items-end gap-4">
-                <Label>Type its handle to confirm<Input name="confirmation" class="mt-2 w-56" placeholder={data.band.handle} required /></Label>
+                <Label>Type its handle to confirm<Input name="confirmation" class="mt-2 w-56" autocomplete="off" {...verbatim} placeholder={data.band.handle} required /></Label>
                 <Button type="submit" color="red">Delete {data.band.name}</Button>
                 {#if form?.deleteError}<FormStatus status={{ state: 'failed', message: form.deleteError }} />{/if}
             </div>

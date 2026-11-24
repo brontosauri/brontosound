@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { verbatim } from '$lib/verbatim';
     import { formatDate } from '$lib/dates';
     import { enhance } from "$app/forms";
     import { Badge, Button, Input, Label, Select, Table, TableBody, TableBodyCell, TableBodyRow, TableHead, TableHeadCell } from "flowbite-svelte";
@@ -69,7 +70,7 @@
         <h3 class="pt-4 text-lg font-bold text-gray-900">Add an override</h3>
         <SaveForm action="?/addOverride" label="Add override" done="Added">
             <div class="grid gap-4 md:grid-cols-2">
-                <Label>For<Input name="handle" class="mt-2" placeholder={QUOTAS[key].for == 'user' ? '@marta' : '@tar-pit-trio'} required /></Label>
+                <Label>For<Input name="handle" class="mt-2" autocomplete="off" {...verbatim} placeholder={QUOTAS[key].for == 'user' ? '@marta' : '@tar-pit-trio'} required /></Label>
                 <Label>Quota<Select name="key" class="mt-2" items={quotaOptions} bind:value={key} placeholder="" /></Label>
             </div>
             <div><p class="mb-2 text-sm font-medium text-gray-900">New limit</p><LimitField name="limit" unit={QUOTAS[key].unit} limit={data.defaults[key]} /></div>

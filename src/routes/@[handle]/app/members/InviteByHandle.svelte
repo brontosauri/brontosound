@@ -1,4 +1,5 @@
 <script lang="ts">
+    import { verbatim } from '$lib/verbatim';
     // Invites someone in the herd: they find it in their profile
     import { enhance } from "$app/forms";
     import { Badge, Button, Input, Label, Select } from "flowbite-svelte";
@@ -14,7 +15,7 @@
         <Badge color="dark">No seats left</Badge>
     {:else}
         <form method="POST" action="?/invite" class="flex flex-wrap items-end gap-4" use:enhance>
-            <Label class="flex-[1_1_160px]">Handle<Input name="handle" class="mt-2" placeholder="@marta" autocomplete="off" required /></Label>
+            <Label class="flex-[1_1_160px]">Handle<Input name="handle" class="mt-2" placeholder="@marta" autocomplete="off" {...verbatim} required /></Label>
             <Label class="w-32">Role<Select name="role" class="mt-2" items={roles} value={BandRole.EDITOR} placeholder="" /></Label>
             <Button type="submit">Invite</Button>
         </form>

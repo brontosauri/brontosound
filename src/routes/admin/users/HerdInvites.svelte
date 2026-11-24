@@ -21,7 +21,7 @@
         {#if !emailReady}Outgoing email isn't set up in Herd settings: until it is, invitations by email wait below.{/if}
     </p>
     <form method="POST" action="?/invite" class="flex flex-wrap items-end gap-4" use:enhance>
-        <Label>Email<Input name="email" type="email" class="mt-2 w-72" placeholder="name@example.com" required /></Label>
+        <Label>Email<Input name="email" type="email" class="mt-2 w-72" autocomplete="off" placeholder="name@example.com" required /></Label>
         <Label>Herd role<Select name="herdRole" class="mt-2 w-32" items={roles} value={HerdRole.USER} placeholder="" /></Label>
         <Button type="submit">Send invitation</Button>
         <Button type="submit" color="light" formaction="?/inviteLink" formnovalidate>Make a link instead</Button>

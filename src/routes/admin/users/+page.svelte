@@ -31,7 +31,7 @@
 {/if}
 
 <div class="mb-4 flex flex-wrap gap-4">
-    <Input class="max-w-sm" bind:value={search} placeholder="Search by name, handle or email" />
+    <Input type="search" class="max-w-sm" bind:value={search} placeholder="Search by name, handle or email" />
     <Select class="w-48" items={filters} bind:value={filter} placeholder="" />
 </div>
 

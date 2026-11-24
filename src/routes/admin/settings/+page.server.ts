@@ -7,7 +7,7 @@ import { listSoundfonts } from '$lib/server/soundfonts';
 import { testSmtp } from '$lib/server/mail';
 import { MAPS_PROVIDERS } from '$lib/maps/providers';
 import { LOCALES } from '$lib/locales';
-import type { SettingEntry, SettingsSection } from '$lib/components/settings/settingEntries';
+import type { SettingEntry, SettingsSection, TextFormat } from '$lib/components/settings/settingEntries';
 import type { Actions, PageServerLoad } from './$types';
 
 type Key = keyof HerdSettingsData;
@@ -18,11 +18,11 @@ const EMAIL_SECTION = 'email';
 /** The herd settings form, with the saved values. Secrets (tokens, keys) are never sent */
 async function sections(): Promise<SettingsSection[]> {
     const s = herdSettings();
-    const text = (label: string, key: Key, hint?: string): SettingEntry => ({ kind: 'text', label, key, hint, value: String(s[key] ?? '') });
+    const text = (label: string, key: Key, hint?: string, format?: TextFormat): SettingEntry => ({ kind: 'text', label, key, hint, format, value: String(s[key] ?? '') });
     const number = (label: string, key: Key, hint?: string): SettingEntry => ({ kind: 'number', label, key, hint, value: Number(s[key]) });
     const toggle = (label: string, key: Key, hint?: string): SettingEntry => ({ kind: 'toggle', label, key, hint, value: Boolean(s[key]) });
     const secret = (label: string, key: Key): SettingEntry => ({ kind: 'secret', label, key, isSet: Boolean(s[key]) });
-    const lines = (label: string, key: Key, hint?: string): SettingEntry => ({ kind: 'lines', label, key, hint, value: s[key] as string[] });
+    const lines = (label: string, key: Key, hint?: string, format?: 'verbatim'): SettingEntry => ({ kind: 'lines', label, key, hint, format, value: s[key] as string[] });
     const choice = (label: string, key: Key, options: { value: string, name: string }[], hint?: string): SettingEntry =>
         ({ kind: 'choice', label, key, hint, value: String(s[key] ?? ''), options });
 
@@ -31,7 +31,7 @@ async function sections(): Promise<SettingsSection[]> {
         { id: "herd", title: "Herd", entries: [
             text("Herd name", "herdName"),
             text("Tagline", "tagline"),
-            text("Contact email", "contactEmail", "Shown when registrations are closed, and in the footer."),
+            text("Contact email", "contactEmail", "Shown when registrations are closed, and in the footer.", 'email'),
             choice("Default language and dates", "locale", LOCALES, "Each person can pick their own."),
             lines("Herd rules", "rules", "One paragraph per line. Shown at sign-up and in the footer."),
         ] },
@@ -45,11 +45,11 @@ async function sections(): Promise<SettingsSection[]> {
             toggle("New accounts confirm their email", "confirmEmails", "Needs outgoing email, below."),
         ] },
         { id: EMAIL_SECTION, title: "Outgoing email", hint: "For email invites, password links and address checks. Without it, you and band owners pass links on yourselves.", entries: [
-            text("SMTP server", "smtpHost", undefined),
+            text("SMTP server", "smtpHost", undefined, 'verbatim'),
             number("Port", "smtpPort", "587 (STARTTLS) or 465 (TLS)."),
-            text("Username", "smtpUsername"),
+            text("Username", "smtpUsername", undefined, 'verbatim'),
             secret("Password", "smtpPassword"),
-            text("From", "smtpFrom", 'Like "Riverside herd <hello@riverside.example>".'),
+            text("From", "smtpFrom", 'Like "Riverside herd <hello@riverside.example>".', 'verbatim'),
         ] },
         { id: "security", title: "Sign-in and security", hint: "The admin password stays in config/config.json (npm run hash-password).", entries: [
             toggle("Refuse passwords found in data breaches", "breachedPasswordCheck", "Checks Have I Been Pwned with the first 5 characters of the password's hash."),
@@ -57,15 +57,15 @@ async function sections(): Promise<SettingsSection[]> {
             toggle("Built-in admin can sign in", "adminPasswordSignIn", "Turn it off once another admin exists."),
         ] },
         { id: "storage", title: "Storage", entries: [
-            text("Herd storage folder", "herdStorageFolder", "In data/files: each new band on herd storage gets its folder here. Bands never see this path."),
+            text("Herd storage folder", "herdStorageFolder", "In data/files: each new band on herd storage gets its folder here. Bands never see this path.", 'verbatim'),
             toggle("Bands can use their own WebDAV", "webdavAllowed", "Owners pick it in their band's storage settings. Turning it off keeps current WebDAV bands working."),
             toggle("WebDAV servers may be on this herd's network", "webdavLocalServers", "Only if you trust every band: otherwise they could reach what only this server can."),
             number("WebDAV connections per band", "webdavConcurrentConnections"),
         ] },
         { id: "maps", title: "Maps", hint: "The provider draws venue maps and finds places for every band, with its own key.", entries: [
             choice("Provider", "mapsProvider", Object.entries(MAPS_PROVIDERS).map(([value, { name }]) => ({ value, name }))),
-            text("OpenStreetMap tile server", "osmTileServer"),
-            text("Nominatim server", "osmNominatimServer", "Check the public server's usage policy first."),
+            text("OpenStreetMap tile server", "osmTileServer", undefined, 'url'),
+            text("Nominatim server", "osmNominatimServer", "Check the public server's usage policy first.", 'url'),
             secret("Mapbox token", "mapboxToken"),
             secret("HERE API key", "hereApiKey"),
             secret("Google Maps token", "googlemapsToken"),
@@ -73,10 +73,10 @@ async function sections(): Promise<SettingsSection[]> {
         { id: "soundfonts", title: "Soundfonts and YouTube", hint: "MIDI files play through these. Each person picks one in the player.", entries: [
             choice("Default soundfont", "defaultSoundfont", soundfonts),
             toggle("Play YouTube links through Invidious", "ytInvidiousEnabled", "No Google tracking in the practice player."),
-            text("Invidious server", "ytInvidiousServer"),
+            text("Invidious server", "ytInvidiousServer", undefined, 'url'),
         ] },
         { id: "backline", title: "Backline", entries: [
-            lines("STUN servers", "backlineStunServers", "One per line. They tell Backline and browsers their public address, for a direct path between networks. Empty: everything goes through this server. Guest limits are in Quotas."),
+            lines("STUN servers", "backlineStunServers", "One per line. They tell Backline and browsers their public address, for a direct path between networks. Empty: everything goes through this server. Guest limits are in Quotas.", 'verbatim'),
         ] },
     ];
 }

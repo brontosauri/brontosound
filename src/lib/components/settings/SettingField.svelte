@@ -1,5 +1,6 @@
 <script lang="ts">
     import { Input, Label, Select, Textarea, Toggle } from 'flowbite-svelte';
+    import { verbatim } from '$lib/verbatim';
     import type { SettingEntry } from './settingEntries';
 
     /** A setting: a field named by its key, or read-only */
@@ -22,14 +23,14 @@
         {#if entry.kind === 'choice'}
             <Select class="mt-1" name={entry.key} items={entry.options} value={entry.value} placeholder="" {disabled} />
         {:else if entry.kind === 'secret'}
-            <Input class="mt-1" name={entry.key} type="password" autocomplete="off" {disabled}
+            <Input class="mt-1" name={entry.key} type="password" autocomplete="new-password" {...verbatim} {disabled}
                 placeholder={entry.isSet ? 'Set: type to replace it' : 'Not set'} />
         {:else if entry.kind === 'lines'}
-            <Textarea class="mt-1" name={entry.key} rows={3} value={entry.value.join('\n')} {disabled} />
+            <Textarea class="mt-1" name={entry.key} rows={3} value={entry.value.join('\n')} {...(entry.format ? verbatim : {})} {disabled} />
         {:else if entry.kind === 'number'}
             <Input class="mt-1 w-32" name={entry.key} type="number" min={0} value={entry.value} {disabled} />
         {:else}
-            <Input class="mt-1" name={entry.key} value={entry.value} placeholder={entry.placeholder ?? (editable ? 'Optional' : 'Not set')} {disabled} />
+            <Input class="mt-1" name={entry.key} type={entry.format == 'verbatim' ? 'text' : entry.format} autocomplete={entry.format == 'email' ? 'email' : undefined} {...(entry.format ? verbatim : {})} value={entry.value} placeholder={entry.placeholder ?? (editable ? 'Optional' : 'Not set')} {disabled} />
         {/if}
         {@render hint()}
     </Label>
