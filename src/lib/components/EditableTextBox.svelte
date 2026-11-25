@@ -5,14 +5,14 @@
     import Fa from "svelte-fa";
     import { faPenToSquare } from "@fortawesome/free-solid-svg-icons";
 
-    export let content: string;
+    export let content: string | undefined;
     export let editable: boolean; // else the notes only show
     export let handleSave: CallableFunction;
     export let isEditing = false;
     export let editingDisabled = false;
     export let height: string = "10rem";
 
-    function handleEscape(event) {
+    function handleEscape(event: KeyboardEvent) {
         if (event.key === 'Escape') {
             // console.log("handleEscape (EditableTextBox):", event);
             isEditing = false;
@@ -36,7 +36,7 @@
             </div>
           {/if}
           <div class="markdown">
-            <Markdown source={content} />
+            <Markdown source={content ?? ''} />
           </div>
         </div>
       {/if}
@@ -59,7 +59,7 @@
           {content}
         {:else}
           MARKDOWN
-          <Markdown source={content} />
+          <Markdown source={content ?? ''} />
         {/if}
       </div> -->
       

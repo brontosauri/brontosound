@@ -12,7 +12,7 @@
     export let home: string;
 
     let isMobile: boolean;
-    let sidebarComponent;
+    let sidebarComponent: ResponsiveSidebar | undefined;
 </script>
 
 <BrontoHeader bind:isMobile bind:sidebarComponent />

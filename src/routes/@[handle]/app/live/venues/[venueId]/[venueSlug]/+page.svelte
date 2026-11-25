@@ -19,6 +19,7 @@
     import { can } from '$lib/permissions';
     import EditableTextBox from '$lib/components/EditableTextBox.svelte';
     import { EnvelopeOutline, GlobeOutline, LinkOutline, MapPinOutline, PhoneOutline, ProfileCardOutline } from 'flowbite-svelte-icons';
+    import type { Component } from 'svelte';
   
   export let form: ActionData;
   export let data;
@@ -28,13 +29,13 @@
   
   $: venueLatLng = venue.location ? locationLatLng(venue.location) : null;
 
-  let venueLinkProperies = []
-  $: venueLinkProperies = venue.links.map(link => {
-    return getLinkProperties(link);
-  });
+  type VenueLinkProperties = { id: number, icon: Component, text: string, href?: string };
 
-  function getLinkProperties(link: LiveVenueLink) {
-    let result = {};
+  $: venueLinkProperies = (venue.links ?? []).map(getLinkProperties);
+  $: gigs = venue.gigs ?? [];
+
+  function getLinkProperties(link: LiveVenueLink): VenueLinkProperties {
+    let result: VenueLinkProperties;
     if (link.type === LocationLinkType.WEBSITE) {
       result = {
         id: link.id,
@@ -75,13 +76,12 @@
         id: link.id,
         icon: MapPinOutline,
         href: safeUrl(link.value),
-        text: PLACE_PAGE_LABELS[link.type],
+        text: PLACE_PAGE_LABELS[link.type]!,
       };
     } else {
       result = {
         id: link.id,
         icon: LinkOutline,
-        href: null,
         text: link.value,
       };
     }
@@ -141,7 +141,7 @@
   }
 
   let busy = false;
-  let newGig: LiveGig = null;
+  let newGig: LiveGig | null = null;
 
   function startNewGig() {
     newGig = new LiveGig();
@@ -176,7 +176,7 @@
 <div class="venueLinks mb-5">
   {#each venueLinkProperies as link}
   <Badge
-    dismissable={canEdit} on:close={() => updateVenue({links: venue.links.filter(l => l.id !== link.id)})}
+    dismissable={canEdit} on:close={() => updateVenue({links: (venue.links ?? []).filter(l => l.id !== link.id)})}
     href={link.href}
     class="mb-2 mr-2 h-8" border
   >
@@ -188,7 +188,7 @@
 
 <Heading tag="h2" class="mb-3">Gigs</Heading>
 
-{#if venue.gigs.length == 0 && ! newGig}
+{#if gigs.length == 0 && ! newGig}
   <PlaceholderBox>
     {#if canEdit}
       <p class="mb-3">You never performed here 😢. Add a new gig if you did so in th past, or if you want to ask {data.venue.name} for the future!</p>
@@ -225,7 +225,7 @@
 
   </form>
   {/if}
-  {#if venue.gigs.length > 0}
+  {#if gigs.length > 0}
     {#if canEdit && ! newGig}
       <Button on:click={startNewGig} class="mt-5 mb-3">Add a past or future gig</Button>
     {/if}
@@ -244,7 +244,7 @@
     </TableHead>
     <TableBody>
   
-      {#each venue.gigs as gig}
+      {#each gigs as gig}
         <TableBodyRow>
           <!-- <TableBodyCell class="!p-4">
             <Checkbox />

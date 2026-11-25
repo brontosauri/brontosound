@@ -1,6 +1,6 @@
 <script lang="ts">
     import { onMount } from "svelte";
-    import { googlePlaceToPlace, loadGoogleMaps } from "$lib/maps/google";
+    import { googlePlaceToPlace, loadGoogleMaps, type GooglePlace } from "$lib/maps/google";
     import type { Place } from "$lib/maps/place";
     import SelectedPlace from "./SelectedPlace.svelte";
 
@@ -8,18 +8,18 @@
     export let lat: number | undefined, lng: number | undefined;
     export let onSave: ((place: Place) => Promise<unknown>) | undefined = undefined; // without it, the map only shows the location
 
-    let latLng;
     $: latLng = {lat: lat, lng: lng};
     const zoom = 17;
 
-    let google;
-    let placesService;
+    // The Maps JavaScript API, loaded at runtime (no type definitions installed)
+    let google: any;
+    let placesService: any;
+    let map: any;
+    let mapMarker: any;
 
-    let newPlace = null;
-    let map;
-    let mapComponent;
-    let mapMarker;
-    let autocompleteInputElement;
+    let newPlace: GooglePlace | null = null;
+    let mapComponent: HTMLDivElement;
+    let autocompleteInputElement: HTMLInputElement;
 
     $: if (mapMarker && newPlace) {mapMarker.setMap(null);} else if (mapMarker && map) {mapMarker.setMap(map)}
     $: if (newPlace && newPlace.geometry) { changeLocation(newPlace.geometry.location.lat(), newPlace.geometry.location.lng(), true) } else if (map) { resetLocation(); }
@@ -52,7 +52,7 @@
         placesService = new google.maps.places.PlacesService(map);
         let autocomplete = new google.maps.places.Autocomplete(autocompleteInputElement)
 
-        map.addListener("click", (e) => {
+        map.addListener("click", (e: any) => {
             e.stop();
             // console.log("map clicked:", e)
             if (e.placeId) {
@@ -68,7 +68,7 @@
         });
     }
 
-    function changeLocation(lat, lng, setPin=false) {
+    function changeLocation(lat: number, lng: number, setPin=false) {
         const position = {lat: lat, lng: lng};
         map.setCenter(position);
         map.setZoom(zoom);
@@ -99,8 +99,8 @@
         placesService.getDetails(
             { placeId: placeId },
             (
-                place,
-                status
+                place: GooglePlace | null,
+                status: string
             ) => {
                 if (
                     status === "OK" &&
@@ -118,7 +118,7 @@
     }
 
     async function handleSave() {
-        const place = googlePlaceToPlace(newPlace);
+        const place = googlePlaceToPlace(newPlace!);
         await onSave!(place);
         lat = place.location.latitude;
         lng = place.location.longitude;

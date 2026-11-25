@@ -6,7 +6,7 @@
   import { bandAppUrl } from '$lib/misc';
 
   export let isMobile: boolean = false;
-  export let sidebarComponent = null;
+  export let sidebarComponent: { toggleDrawer: () => void } | undefined = undefined;
 </script>
 
 

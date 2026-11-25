@@ -111,7 +111,7 @@ export class LiveGig extends UserCreatedEntity {
     venue: LiveVenue
 
     @OneToMany(() => LiveGigInteraction, interaction => interaction.gig)
-    interactions: LiveGigInteraction[] = null
+    interactions: LiveGigInteraction[]
 
     @Column({ type: 'json', nullable: true})
     proposedCachet?: MoneyAmount | null

@@ -35,7 +35,7 @@
 	let backdrop: boolean = false;
 	let activateClickOutside = true;
 	let drawerHidden: boolean = false;
-    export let isMobile;
+    export let isMobile: boolean;
     $: if (width >= breakPoint) { isMobile = false; } else { isMobile = true; }
 	$: if (! isMobile ) {
 		drawerHidden = false;

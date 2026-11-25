@@ -8,11 +8,11 @@ export function arrayEquals<T>(a: Array<T>, b: Array<T>) {
         a.every((val, index) => val === b[index]);
 }
 
-export function sleep(ms) {
+export function sleep(ms: number) {
     return new Promise(resolve => setTimeout(resolve, ms));
 }
 
-export function pathJoin(...pathComponents){
+export function pathJoin(...pathComponents: string[]){
     const separator = '/';
     var replace = new RegExp(separator+'{1,}', 'g');
     return pathComponents.join(separator).replace(replace, separator);

@@ -1,5 +1,5 @@
 import "reflect-metadata"
-import { DataSource, type Repository, type DeepPartial, type EntityTarget } from "typeorm"
+import { DataSource, type Repository, type DeepPartial, type EntityTarget, type ObjectLiteral } from "typeorm"
 import { Song, SongFolder, SongTag } from "$lib/dbEntities/song"
 import { LiveGig, LiveGigInteraction, LiveVenue, LiveVenueLink, LiveVenueLocation } from "./dbEntities/live";
 import { HerdInvite, PasswordLink, User, UserAccount, UserCreatedEntity } from "./dbEntities/user";
@@ -58,7 +58,7 @@ class TypeOrm {
     return TypeOrm.instance;
   }
 
-  public static async getRepository<Type>(target: EntityTarget<Type>): Promise<Repository<Type>> {
+  public static async getRepository<Type extends ObjectLiteral>(target: EntityTarget<Type>): Promise<Repository<Type>> {
       const db = await TypeOrm.getDb();
       return db.getRepository(target);
   }

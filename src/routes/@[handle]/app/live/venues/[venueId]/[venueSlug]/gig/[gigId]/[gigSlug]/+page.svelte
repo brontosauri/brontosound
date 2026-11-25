@@ -47,14 +47,15 @@
     return updateGig({note: value})
   }
 
-  function handleEscape(event) {
+  function handleEscape(event: KeyboardEvent) {
 		if (event.key === 'Escape') {
       console.log("handleEscape:", event);
-      if (event.target.id == "proposedCachet") {
-        event.target.value = (gig.proposedCachet) ? gig.proposedCachet.amount : null;
-        event.target.blur();
+      const input = event.target as HTMLInputElement;
+      if (input.id == "proposedCachet") {
+        input.value = (gig.proposedCachet) ? String(gig.proposedCachet.amount) : '';
+        input.blur();
       } else {
-        console.error("Invalid id for escape handler:", event.target.id)
+        console.error("Invalid id for escape handler:", input.id)
       }
 		}
   }
@@ -74,7 +75,7 @@
       <Label for="first_name" class="mb-2">Status</Label>
       <Select items={LIVE_GIG_STATUS_NAMES} value={gig.status} disabled={busy || !canEdit} on:change={async (e) => {
         const value =  (e.target as HTMLSelectElement).value;
-        await updateGig({status: LiveGigStatus[value]});
+        await updateGig({status: value as LiveGigStatus});
       }}/>
     </div>
     <div>
