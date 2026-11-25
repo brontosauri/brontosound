@@ -53,7 +53,7 @@
             class="h-7 w-36 rounded border border-gray-300 px-2 text-sm focus:border-primary-500 focus:ring-primary-500" />
         <datalist id="all-song-tags">{#each allTags as tag}<option value={tag}></option>{/each}</datalist>
     {:else if editable}
-        <button type="button" class="inline-flex items-center gap-1.5 px-1 py-0.5 text-sm font-medium text-primary-800 hover:text-primary-900" onclick={() => adding = true}>
+        <button type="button" class="inline-flex h-7 items-center gap-1.5 rounded border border-dashed border-gray-300 bg-white px-2.5 text-xs font-medium text-gray-500 hover:border-gray-400 hover:text-gray-700" onclick={() => adding = true}>
             <Fa icon={faPlus} size="xs" />Add tag
         </button>
     {/if}

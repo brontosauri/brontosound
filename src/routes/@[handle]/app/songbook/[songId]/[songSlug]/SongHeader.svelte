@@ -1,9 +1,11 @@
 <script lang="ts">
   import { bandApi } from '$lib/bandApi';
-    import { faPencil, faRotate } from '@fortawesome/free-solid-svg-icons';
+    import { faArrowLeft, faPencil, faRotate } from '@fortawesome/free-solid-svg-icons';
     import { Button } from 'flowbite-svelte';
     import Fa from 'svelte-fa';
     import { invalidateAll } from '$app/navigation';
+    import { page } from '$app/state';
+    import { bandAppUrl } from '$lib/misc';
     import { fetchApi } from '$lib/db';
     import SongTags from './SongTags.svelte';
 
@@ -74,6 +76,9 @@
         </div>
     {:else}
         <div class="flex min-w-0 flex-col items-start gap-1">
+            <a href={bandAppUrl(page.params.handle ?? '', '/songbook')} class="mb-1 inline-flex items-center gap-2 text-sm font-medium text-primary-800 hover:text-primary-900">
+                <Fa icon={faArrowLeft} size="xs" />Back to Songbook
+            </a>
             <h1 class="max-w-full break-words text-5xl font-bold tracking-tight text-gray-900">
                 {#if editable}
                     <button type="button" class="{editableText} gap-3.5 break-words" onclick={() => edit('title')} aria-label="Edit title and artist: {title}">
@@ -90,10 +95,10 @@
                     {artist}<Fa icon={faPencil} class="{pencil} text-sm" />
                 </button>
             {:else}
-                <button type="button" class="py-1 text-sm font-medium text-primary-800 hover:text-primary-900" onclick={() => edit('artist')}>+ Add artist</button>
+                <button type="button" class="mt-0.5 cursor-text border-b border-dashed border-gray-300 text-xl text-gray-500 hover:border-gray-400 hover:text-gray-700" onclick={() => edit('artist')}>Add artist</button>
             {/if}
             {#if editable || tags.length}
-                <div class="mt-2"><SongTags {songId} initialTags={tags} {allTags} {editable} /></div>
+                <div class="mt-3"><SongTags {songId} initialTags={tags} {allTags} {editable} /></div>
             {/if}
         </div>
     {/if}
