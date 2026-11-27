@@ -20,7 +20,7 @@
         <Button type="submit" class="w-full">Continue</Button>
     </form>
     <EarlyAccessNote />
-    <form method="POST" action="?/decline" class="text-center text-sm text-gray-500">
+    <form method="POST" action="?/decline" class="text-center text-sm text-gray-500" onsubmit={event => { if (!confirm("Delete the account? You can join again later.")) event.preventDefault(); }}>
         Not for you? <button type="submit" class="font-medium text-primary-800 hover:text-primary-900">Delete the account Google created</button>
     </form>
 </main>

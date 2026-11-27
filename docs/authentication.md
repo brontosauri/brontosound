@@ -36,7 +36,7 @@ User `admin` (no email) is created at startup. Its password hash is `adminPasswo
 
 A herd role (`admin`, `user`) and a role in each band (`owner`, `editor`, `viewer`): see [herd.md](herd.md). Herd admins add and remove users in **Admin → Users**. Every load, endpoint and form action checks with `requirePermission()` or, inside a band, `requireBandPermission()`; the UI hides what the role can't do (`can()`). Profile, player preferences and Backline links are the user's own.
 
-Removing a user deletes their password, linked accounts, memberships and Backline links (cutting off their Backline if live), signs them out everywhere, and sets `removedDate`; the last owner of a band can't be removed. The row is kept so their content keeps its author; adding the same email again restores it.
+Removing a user (an admin's choice, or their own) deletes their password, linked accounts, memberships, invites and Backline links (cutting off their Backline if live), signs them out everywhere, and sets `removedDate`; the last owner of a band can't be removed. The row stays, anonymised as "Former member", so what they added keeps an author; inviting the same email again creates a new account.
 
 ## Linked accounts
 

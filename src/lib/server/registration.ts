@@ -53,7 +53,7 @@ export async function register(input: AccountInput & { email: unknown }, inviteT
 
 /**
  * A new user from a herd admin's invite (herdInvites.ts), with its herd role and email: the link came there. A link
- * invite has none: they sign in with their handle. A removed user's email gets their account back
+ * invite has none: they sign in with their handle
  */
 export async function acceptHerdInvite(token: string, input: AccountInput): Promise<User> {
     throttleSignUps();
@@ -61,13 +61,9 @@ export async function acceptHerdInvite(token: string, input: AccountInput): Prom
     if (!invite) error(404, 'This invitation has expired, or was used already');
     const account = await accountFields(input);
     return claimHandle(account.handle, async () => {
-        const removed = invite.email ? await findUserByLogin(invite.email) : null;
-        if (removed && !removed.removedDate) error(409, 'There is already an account with this email: sign in instead');
+        if (invite.email && await findUserByLogin(invite.email)) error(409, 'There is already an account with this email: sign in instead');
         await useHerdInvite(invite.id);
-        return saveNewUser({
-            ...removed, ...account, email: invite.email, username: invite.email ?? `no-email:${newToken()}`, herdRole: invite.herdRole,
-            removedDate: null, suspendedDate: null, totpEnabled: false, totpSecret: null,
-        });
+        return saveNewUser({ ...account, email: invite.email, username: invite.email ?? `no-email:${newToken()}`, herdRole: invite.herdRole });
     });
 }
 

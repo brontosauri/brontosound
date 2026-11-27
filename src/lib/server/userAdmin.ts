@@ -1,8 +1,8 @@
 import { error } from '@sveltejs/kit';
-import { IsNull } from 'typeorm';
+import { IsNull, Like, Not } from 'typeorm';
 import TypeOrm from '$lib/db';
-import { Membership } from '$lib/dbEntities/band';
-import { HerdRole, User, UserAccount } from '$lib/dbEntities/user';
+import { Invite, Membership } from '$lib/dbEntities/band';
+import { HerdRole, PasswordLink, User, UserAccount, Visibility } from '$lib/dbEntities/user';
 import { removeLinksOf } from './backline/links';
 import { claimHandle, validHandle } from './handles';
 import { bandsOnlyOwnedBy } from './members';
@@ -103,7 +103,17 @@ export async function deleteOwnAccount(user: User): Promise<void> {
     await removeAccount(user);
 }
 
-// Revokes all sign-in methods, sessions, bands and Backline links, frees the handle and hides the user; see
+/**
+ * What's left of a removed user: the row, so what they added to bands stays signed, as "Former member". Their
+ * name, email, profile and sign-in methods go (the Privacy Policy promises it)
+ */
+const anonymous = (id: number): Partial<User> => ({
+    username: `removed:${id}`, name: 'Former member', email: null, handle: null, avatar: null, passwordHash: null,
+    about: '', instruments: '', city: '', website: '', visibility: Visibility.HIDDEN, locale: null, soundfont: null,
+    totpSecret: null, totpEnabled: false, totpLastStep: null, quotaOverrides: {},
+});
+
+// Revokes all sign-in methods, sessions, bands, invites and Backline links, and anonymises the user; see
 // `User.removedDate`. A band's only owner can't go
 async function removeAccount(user: User): Promise<void> {
     const { id } = user;
@@ -115,9 +125,19 @@ async function removeAccount(user: User): Promise<void> {
     await db.transaction(async manager => {
         await manager.delete(Membership, { user: { id } });
         await manager.delete(UserAccount, { user: { id } });
-        await manager.update(User, id, { removedDate: new Date(), passwordHash: null, handle: null, avatar: null });
+        await manager.delete(Invite, { user: { id } });
+        await manager.delete(PasswordLink, { user: { id } });
+        await manager.update(User, id, { ...anonymous(id), removedDate: new Date() });
         await manager.increment(User, { id }, 'sessionVersion', 1);
     });
     await removeLinksOf(id);
     await deletePicture(user.avatar);
+}
+
+/** Users removed before removal anonymised them: anonymised at startup */
+export async function anonymiseRemovedUsers(): Promise<void> {
+    const users = await TypeOrm.getRepository(User);
+    for (const { id } of await users.findBy({ removedDate: Not(IsNull()), username: Not(Like('removed:%')) })) {
+        await users.update(id, anonymous(id));
+    }
 }

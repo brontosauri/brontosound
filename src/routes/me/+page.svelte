@@ -67,6 +67,11 @@
         </div>
     </SettingsCard>
 
+    <SettingsCard title="Your data">
+        <p class="text-sm text-gray-700">Your account, profile, bands and what you added, as JSON. Band owners export each band's content in its settings.</p>
+        <Button href="/me/data" color="light" class="w-fit" download data-sveltekit-reload>Download your data</Button>
+    </SettingsCard>
+
     {#if !data.profile.isDefaultAdmin}
         <DeleteAccount error={form?.deleteError} />
     {/if}

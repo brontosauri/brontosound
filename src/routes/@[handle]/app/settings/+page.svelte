@@ -5,6 +5,7 @@
     import { BandStorage } from "$lib/dbEntities/band";
     import { Visibility } from "$lib/dbEntities/user";
     import { can } from "$lib/permissions";
+    import { bandAppUrl } from "$lib/misc";
     import StorageMeter from "./StorageMeter.svelte";
     import BandLogo from "$lib/components/BandLogo.svelte";
     import PictureUpload from "$lib/components/PictureUpload.svelte";
@@ -84,7 +85,9 @@
                     <Label>Songs folder<Input name="webdavSongsFolder" class="mt-2" {...verbatim} value={data.settings.webdavSongsFolder} disabled={!owner} required /></Label>
                     {#if owner}
                         <Label>Username<Input name="webdavUsername" class="mt-2" autocomplete="off" {...verbatim} value={data.settings.webdavUsername} /></Label>
-                        <Label>Password<Input name="webdavPassword" type="password" class="mt-2" autocomplete="new-password" {...verbatim} placeholder="Saved: type to replace it" /></Label>
+                        <Label>Password<Input name="webdavPassword" type="password" class="mt-2" autocomplete="new-password" {...verbatim} placeholder="Saved: type to replace it" />
+                            <p class="mt-1 text-[13px] font-normal text-gray-500">Use an app password limited to the songs folder.</p>
+                        </Label>
                     {/if}
                 </div>
                 {#if owner}
@@ -106,6 +109,11 @@
     </SettingsCard>
 
     {#if owner}
+        <SettingsCard title="Export">
+            <p id="export" class="text-sm text-gray-700">{data.settings.storage == BandStorage.HERD ? 'The songs folder, with gigs, venues, contacts and members as JSON, in a ZIP.' : "Gigs, venues, contacts and members as JSON, in a ZIP: your song files are on your WebDAV already."}</p>
+            <Button href={bandAppUrl(data.band.handle, '/settings/export')} color="light" class="w-fit" download data-sveltekit-reload>Export band</Button>
+        </SettingsCard>
+
         <form method="POST" action="?/delete" class="space-y-4 border-t border-gray-200 pt-6" use:enhance>
             <h2 class="text-xl font-bold text-gray-900">Delete the band</h2>
             <p class="text-sm text-gray-700">Deletes the songbook, gigs, venues and contacts of {data.band.name} for all its members, and empties its herd storage. Files on your own WebDAV stay where they are. This can't be undone.</p>

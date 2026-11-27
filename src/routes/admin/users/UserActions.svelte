@@ -42,7 +42,7 @@
             <input type="hidden" name="user" value={user.id} />
             <Button type="submit" size="xs" color="light">{user.suspended ? 'Restore' : 'Suspend'}</Button>
         </form>
-        <form method="POST" action="?/remove" use:enhance={confirmed(`Remove ${user.name}? They leave their bands and their handle is freed; what they added stays with their bands.`)}>
+        <form method="POST" action="?/remove" use:enhance={confirmed(`Remove ${user.name}? They leave their bands, and their name, email and profile are erased; what they added stays with their bands, signed "Former member". This can't be undone.`)}>
             <input type="hidden" name="user" value={user.id} />
             <Button type="submit" size="xs" color="red" outline>Remove</Button>
         </form>

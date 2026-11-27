@@ -76,6 +76,6 @@
     </TableBody>
 </Table>
 {/key}
-<p class="mt-2 text-[13px] text-gray-500">Suspended people can't sign in; their bands keep working. Removing someone frees their handle; what they added stays with their bands.</p>
+<p class="mt-2 text-[13px] text-gray-500">Suspended people can't sign in, and are told why; their bands keep working. Removing someone erases their name, email and profile; what they added stays with their bands.</p>
 
 <HerdInvites invites={data.invites} emailReady={data.emailReady} {form} />
