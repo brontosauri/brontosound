@@ -13,3 +13,4 @@ static/band/
 database.sqlite
 research/
 /data*
+/.agent

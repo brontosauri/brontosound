@@ -22,6 +22,8 @@ Docker build/run instructions: see [README.md](README.md).
 
 ## Writing (this matters)
 
+**The user reads at most 2 lines unless they ask for more**: no essays, no clearly suboptimal alternatives, no useless caveats, no pointless warnings, no false alarms. If anything is critical, stop and ask.
+
 **Be as concise as you can be.** Every extra word costs the reader time. Say the thing
 once, then stop — no restating the task back, no summarising what the diff already shows,
 no caveats nobody asked for. This applies to chat replies, commit messages, docs and this
@@ -64,3 +66,4 @@ Conventional Commits (`feat:`, `fix:`, `refactor:`, …) — `standard-version` 
 
 - No `.env`: secrets live in `config/config.json`, created by `npm run init`.
 - Test suites are still the create-svelte placeholders.
+- Coding agents test on their own instance, never the developer's: `BRONTOSOUND_DATA_DIR=.agent/data BRONTOSOUND_CONFIG_DIR=.agent/config npm run init` (`.agent/` is gitignored), then the `agent` entry in `.claude/launch.json`; keep its test logins in `.agent/config/`.

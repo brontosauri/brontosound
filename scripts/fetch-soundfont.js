@@ -3,9 +3,10 @@
 //   npm run fetch-soundfont [-- <name> [<base URL>]]
 import { mkdir, writeFile, access } from 'node:fs/promises';
 import { GM_INSTRUMENTS, GM_PERCUSSION } from '../src/lib/player/gmInstruments.ts';
+import { localDataRoot } from '../src/lib/server/config.ts';
 
 const [name = 'FluidR3_GM', base = `https://paulrosen.github.io/midi-js-soundfonts/${name}/`] = process.argv.slice(2);
-const folder = `data/soundfonts/${name}`;
+const folder = `${localDataRoot}/soundfonts/${name}`;
 const files = [...GM_INSTRUMENTS, GM_PERCUSSION].map(instrument => `${instrument}-mp3.js`);
 
 await mkdir(folder, { recursive: true });

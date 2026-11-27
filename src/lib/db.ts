@@ -23,7 +23,7 @@ class TypeOrm {
     if (!TypeOrm.instance) {
       TypeOrm.instance = new DataSource({
           type: "better-sqlite3",
-          database: "data/database/database.sqlite", // TODO: use a config file
+          database: `${process.env.BRONTOSOUND_DATA_DIR ?? 'data'}/database/database.sqlite`, // as in server/config.ts, which the browser can't import
           entities: [
             HerdSettings,
             Picture,

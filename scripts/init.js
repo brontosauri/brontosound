@@ -14,7 +14,7 @@ async function createConfig() {
 	const password = await askNewPassword();
 
 	await mkdir(configRoot, { recursive: true });
-	const template = JSON.parse(await readFile(configRoot + '/config.template.json', 'utf-8'));
+	const template = JSON.parse(await readFile('config/config.template.json', 'utf-8'));
 	const config = {
 		...template,
 		adminPasswordHash: await hashPassword(password),

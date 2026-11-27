@@ -4,6 +4,8 @@ import { Writable } from 'node:stream';
 import { passwordProblem } from '../src/lib/server/password.ts';
 
 const interactive = !!process.stdin.isTTY;
+// vite-node's Vite exits the process when piped input ends, before the script has used it
+process.stdin.removeAllListeners('end');
 // Readline writes nothing to the terminal while muted, so typed characters (and line edits) stay hidden
 let muted = false;
 const output = new Writable({ write(chunk, _encoding, callback) { if (!muted) process.stderr.write(chunk); callback(); } });
