@@ -33,6 +33,7 @@
     : page.form?.credentialsError === 'two_step_invalid' ? "Wrong code. Enter the one your app shows now."
     : page.form?.credentialsError === 'busy' ? "Too many sign-ins right now. Try again in a moment."
     : page.form?.credentialsError === 'unconfirmed' ? "Confirm your email first: follow the link we sent you."
+    : page.form?.credentialsError === 'suspended' ? `The herd's admins suspended your account${page.form.suspensionReason ? `: ${page.form.suspensionReason}` : '.'}`
     : page.form?.credentialsError && !asksCode ? "Invalid credentials."
     : page.url.searchParams.has('error') ? (authErrors[page.url.searchParams.get('error') ?? ''] ?? "Sign-in failed.")
     : null

@@ -5,6 +5,7 @@ import { endBandSession } from './backline/liveSession';
 import { removeHerdFolder } from './bands';
 import { claimHandle, validHandle } from './handles';
 import { deletePicture } from './pictures';
+import { emailSuspension } from './suspensions';
 
 // What herd admins see of bands, and do with them (/admin/bands): their metadata, never their content
 
@@ -16,6 +17,7 @@ export interface BandListItem {
     memberCount: number;
     storage: BandStorage;
     suspended: boolean;
+    suspensionReason: string | null;
     creationDate: Date;
 }
 
@@ -32,6 +34,7 @@ export async function listBands(): Promise<BandListItem[]> {
             owners: members.filter(({ role }) => role === BandRole.OWNER).map(({ user }) => user.name),
             memberCount: members.length,
             suspended: !!band.suspendedDate,
+            suspensionReason: band.suspensionReason,
             creationDate: band.creationDate,
         };
     });
@@ -43,16 +46,18 @@ export async function findBand(id: number): Promise<Band> {
     return band;
 }
 
-/** Locks the band for its members, and ends its live session; nothing is deleted */
-export async function suspendBand(id: number): Promise<void> {
-    await findBand(id);
-    await (await TypeOrm.getRepository(Band)).update(id, { suspendedDate: new Date() });
+/** Locks the band for its members, and ends its live session; nothing is deleted. Its owners are told why */
+export async function suspendBand(id: number, reason: string): Promise<void> {
+    const band = await findBand(id);
+    await (await TypeOrm.getRepository(Band)).update(id, { suspendedDate: new Date(), suspensionReason: reason });
     endBandSession(id);
+    const owners = await (await TypeOrm.getRepository(Membership)).find({ where: { band: { id }, role: BandRole.OWNER }, relations: { user: true } });
+    await emailSuspension(owners.map(({ user }) => user.email), band.name, reason);
 }
 
 export async function restoreBand(id: number): Promise<void> {
     await findBand(id);
-    await (await TypeOrm.getRepository(Band)).update(id, { suspendedDate: null });
+    await (await TypeOrm.getRepository(Band)).update(id, { suspendedDate: null, suspensionReason: null });
 }
 
 /** A new handle for the band: the old one is free for others. Its herd storage folder stays where it is */

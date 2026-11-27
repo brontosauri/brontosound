@@ -37,6 +37,12 @@ export class EmailUnconfirmed extends CredentialsSignin {
 }
 
 // Too many sign-ins at once (see MAX_QUEUED_SCRYPT): nothing was checked
+// The password was right, but admins suspended the account: they're told why
+export class AccountSuspended extends CredentialsSignin {
+    code = 'suspended';
+    constructor(public reason: string) { super(); }
+}
+
 export class SignInBusy extends CredentialsSignin {
     code = 'busy';
 }
@@ -128,7 +134,7 @@ export async function authenticateWithPassword(login: string, password: string, 
     const user = await findUserByLogin(login, true);
     let valid = false;
     try {
-        if (user && !user.removedDate && !user.suspendedDate && user.passwordHash && mayUseAccount(user)) {
+        if (user && !user.removedDate && user.passwordHash && mayUseAccount(user)) {
             valid = await verifyPassword(password, user.passwordHash);
         } else {
             await verifyPassword(password, await (dummyHash ??= hashPassword('dummy'))); // takes as long as a real check
@@ -139,6 +145,9 @@ export async function authenticateWithPassword(login: string, password: string, 
     if (!valid || !user) {
         recordFailure(login, address);
         return null;
+    }
+    if (user.suspendedDate) {
+        throw new AccountSuspended(user.suspensionReason ?? '');
     }
     if (user.unconfirmedEmail) {
         throw new EmailUnconfirmed();

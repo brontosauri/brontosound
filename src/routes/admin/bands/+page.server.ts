@@ -1,6 +1,7 @@
 import { fail, isHttpError } from '@sveltejs/kit';
 import { requireHerdAdmin } from '$lib/server/admin';
 import { deleteBand, listBands, renameBandHandle, restoreBand, suspendBand } from '$lib/server/bandAdmin';
+import { suspensionReason } from '$lib/server/suspensions';
 import type { Actions, PageServerLoad } from './$types';
 
 export const load = (async ({ locals }) => {
@@ -26,7 +27,7 @@ async function asAdmin(locals: App.Locals, request: Request, change: (form: Form
 }
 
 export const actions = {
-    suspend: async ({ request, locals }) => asAdmin(locals, request, (_, id) => suspendBand(id)),
+    suspend: async ({ request, locals }) => asAdmin(locals, request, (form, id) => suspendBand(id, suspensionReason(form.get('reason')))),
     restore: async ({ request, locals }) => asAdmin(locals, request, (_, id) => restoreBand(id)),
     rename: async ({ request, locals }) => asAdmin(locals, request, (form, id) => renameBandHandle(id, form.get('handle'))),
     delete: async ({ request, locals }) => asAdmin(locals, request, (form, id) => deleteBand(id, form.get('confirmation'))),

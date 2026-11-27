@@ -59,10 +59,19 @@
                                 <label class="text-sm font-medium text-gray-900">Handle<Input name="handle" size="sm" class="mt-1 w-44" autocomplete="off" {...verbatim} value={band.handle} required /></label>
                                 <Button type="submit" size="xs" color="light">Rename</Button>
                             </form>
-                            <form method="POST" action={band.suspended ? '?/restore' : '?/suspend'} use:enhance>
-                                <input type="hidden" name="band" value={band.id} />
-                                <Button type="submit" size="xs" color="light">{band.suspended ? 'Restore' : 'Suspend'}</Button>
-                            </form>
+                            {#if band.suspended}
+                                <form method="POST" action="?/restore" class="flex items-end gap-2" use:enhance>
+                                    <input type="hidden" name="band" value={band.id} />
+                                    <span class="text-sm text-gray-700">Suspended: {band.suspensionReason ?? 'no reason given'}</span>
+                                    <Button type="submit" size="xs" color="light">Restore</Button>
+                                </form>
+                            {:else}
+                                <form method="POST" action="?/suspend" class="flex items-end gap-2" use:enhance>
+                                    <input type="hidden" name="band" value={band.id} />
+                                    <label class="text-sm font-medium text-gray-900">Why suspend<Input name="reason" size="sm" class="mt-1 w-64" maxlength={500} placeholder="Sheet music shared publicly without permission" required /></label>
+                                    <Button type="submit" size="xs" color="light">Suspend</Button>
+                                </form>
+                            {/if}
                             <form method="POST" action="?/delete" class="flex items-end gap-2" use:enhance>
                                 <input type="hidden" name="band" value={band.id} />
                                 <label class="text-sm font-medium text-gray-900">To delete, type its handle<Input name="confirmation" size="sm" class="mt-1 w-44" autocomplete="off" {...verbatim} placeholder={band.handle} required /></label>
@@ -76,4 +85,4 @@
     </TableBody>
 </Table>
 {/key}
-<p class="mt-2 text-[13px] text-gray-500">Suspending locks a band for its members; nothing is deleted. Deleting removes its songbook, gigs, venues and contacts, and empties its herd storage.</p>
+<p class="mt-2 text-[13px] text-gray-500">Suspending locks a band for its members, who see why; nothing is deleted. Deleting removes its songbook, gigs, venues and contacts, and empties its herd storage.</p>

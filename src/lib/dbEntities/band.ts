@@ -96,6 +96,10 @@ export class Band {
     @Column({ type: 'datetime', nullable: true })
     suspendedDate: Date | null;
 
+    // Why, as admins told its owners (DSA art. 17): emailed, and shown to its members
+    @Column({ type: 'varchar', nullable: true })
+    suspensionReason: string | null;
+
     // Herd admins' exceptions to the herd's quotas ($lib/quotas.ts)
     @Column({ type: 'simple-json', default: '{}' })
     quotaOverrides: QuotaOverrides;

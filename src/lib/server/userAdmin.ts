@@ -7,6 +7,7 @@ import { removeLinksOf } from './backline/links';
 import { claimHandle, validHandle } from './handles';
 import { bandsOnlyOwnedBy } from './members';
 import { deletePicture } from './pictures';
+import { emailSuspension } from './suspensions';
 import { isBuiltInAdmin } from './users';
 
 // What herd admins do with the herd's users (/admin/users)
@@ -20,6 +21,7 @@ export interface UserListItem {
     bandCount: number;
     signInMethods: string[];
     suspended: boolean;
+    suspensionReason: string | null;
     builtIn: boolean; // the built-in admin, configured in config/config.json
     creationDate: Date;
 }
@@ -47,6 +49,7 @@ export async function listUsers(): Promise<UserListItem[]> {
             ...new Set(user.accounts?.map(account => account.provider)),
         ],
         suspended: !!user.suspendedDate,
+        suspensionReason: user.suspensionReason ?? null,
         builtIn: isBuiltInAdmin(user),
         creationDate: user.creationDate,
     }));
@@ -72,18 +75,19 @@ export async function setHerdRole(id: number, herdRole: HerdRole, by: User): Pro
     await (await TypeOrm.getRepository(User)).update(id, { herdRole });
 }
 
-/** They can't sign in until restored (their sessions end); their bands keep working */
-export async function suspendUser(id: number, by: User): Promise<void> {
-    await otherUser(id, by, 'suspend');
+/** They can't sign in until restored (their sessions end), and are told why; their bands keep working */
+export async function suspendUser(id: number, by: User, reason: string): Promise<void> {
+    const user = await otherUser(id, by, 'suspend');
     const users = await TypeOrm.getRepository(User);
-    await users.update(id, { suspendedDate: new Date() });
+    await users.update(id, { suspendedDate: new Date(), suspensionReason: reason });
     await users.increment({ id }, 'sessionVersion', 1);
     await removeLinksOf(id); // their Backline goes offline, and needs linking again
+    await emailSuspension([user.email], 'your account', reason);
 }
 
 export async function restoreUser(id: number): Promise<void> {
     await findUser(id);
-    await (await TypeOrm.getRepository(User)).update(id, { suspendedDate: null });
+    await (await TypeOrm.getRepository(User)).update(id, { suspendedDate: null, suspensionReason: null });
 }
 
 /** A new handle for the user: the old one is free for others */

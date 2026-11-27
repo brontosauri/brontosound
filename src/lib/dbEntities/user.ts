@@ -91,6 +91,10 @@ export class User {
     @Column({ type: 'datetime', nullable: true })
     suspendedDate?: Date | null;
 
+    // Why, as admins told them (DSA art. 17): emailed, and shown when they sign in
+    @Column({ type: 'varchar', nullable: true })
+    suspensionReason?: string | null;
+
     // Herd admins' exceptions to the herd's quotas ($lib/quotas.ts), with their reasons: not for the browser
     @Exclude()
     @Column({ type: 'simple-json', default: '{}' })

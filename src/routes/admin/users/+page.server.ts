@@ -9,6 +9,7 @@ import { emailReady } from '$lib/server/mail';
 import { resetTwoStep } from '$lib/server/twoStep';
 import { createInviteLink, type Delivery, inviteByEmail, listHerdInvites, newInviteLink, sendAgain, withdrawInvite } from '$lib/server/herdInvites';
 import { listUsers, removeUser, renameUserHandle, restoreUser, setHerdRole, suspendUser } from '$lib/server/userAdmin';
+import { suspensionReason } from '$lib/server/suspensions';
 import type { Actions, PageServerLoad } from './$types';
 
 export const load = (async ({ locals }) => {
@@ -65,8 +66,8 @@ export const actions = {
         await setHerdRole(id, oneOf(form.get('herdRole'), HerdRole, 'herd role'), user);
         return {};
     }),
-    suspend: async ({ request, locals }) => asAdmin(locals, request, async (_, id, { user }) => {
-        await suspendUser(id, user);
+    suspend: async ({ request, locals }) => asAdmin(locals, request, async (form, id, { user }) => {
+        await suspendUser(id, user, suspensionReason(form.get('reason')));
         return {};
     }),
     restore: async ({ request, locals }) => asAdmin(locals, request, async (_, id) => {

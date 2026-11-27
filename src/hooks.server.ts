@@ -45,7 +45,7 @@ export const authorizationHandle: Handle = async ({ event, resolve }) => {
                 error(404, 'Not found');
             }
             if (membership.band.suspendedDate) {
-                error(403, "The herd's admins suspended this band. Ask them why.");
+                error(403, `The herd's admins suspended this band: ${membership.band.suspensionReason ?? 'ask them why'}`);
             }
         }
         // Joined with Google: nothing but the Terms until they accept them

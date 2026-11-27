@@ -12,6 +12,17 @@
 </script>
 
 <div class="flex flex-wrap items-end gap-6 py-2">
+    {#if user.suspended}
+        <p class="w-full text-sm text-gray-700">Suspended: {user.suspensionReason ?? 'no reason given'}</p>
+    {:else}
+        <form method="POST" action="?/suspend" class="flex items-end gap-2" use:enhance>
+            <input type="hidden" name="user" value={user.id} />
+            <label class="text-sm font-medium text-gray-900">Why suspend
+                <Input name="reason" size="sm" class="mt-1 w-64" maxlength={500} placeholder="Spam in your public profile" required />
+            </label>
+            <Button type="submit" size="xs" color="light">Suspend</Button>
+        </form>
+    {/if}
     <form method="POST" action="?/setHerdRole" class="flex items-end gap-2" use:enhance>
         <input type="hidden" name="user" value={user.id} />
         <label class="text-sm font-medium text-gray-900">Herd role
@@ -38,10 +49,13 @@
                 <Button type="submit" size="xs" color="light">Reset two-step</Button>
             </form>
         {/if}
-        <form method="POST" action={user.suspended ? '?/restore' : '?/suspend'} use:enhance>
-            <input type="hidden" name="user" value={user.id} />
-            <Button type="submit" size="xs" color="light">{user.suspended ? 'Restore' : 'Suspend'}</Button>
-        </form>
+        {#if user.suspended}
+            <form method="POST" action="?/restore" use:enhance>
+                <input type="hidden" name="user" value={user.id} />
+                <Button type="submit" size="xs" color="light">Restore</Button>
+            </form>
+        {/if}
+
         <form method="POST" action="?/remove" use:enhance={confirmed(`Remove ${user.name}? They leave their bands, and their name, email and profile are erased; what they added stays with their bands, signed "Former member". This can't be undone.`)}>
             <input type="hidden" name="user" value={user.id} />
             <Button type="submit" size="xs" color="red" outline>Remove</Button>
