@@ -22,11 +22,19 @@ One document and one audio file can be pinned (`Song.pinnedDocument`, `Song.pinn
 
 - ChordPro: [directives](https://www.chordpro.org/chordpro/chordpro-directives/) for metadata, verse/chorus/bridge/tab/grid sections with labels, `{chorus}` recall (shown as a comment, as ChordPro prints it), comments, `[*annotations]`. Formatting directives, `{define}` and notation sections (`abc`, `ly`, `svg`, `textblock`) are ignored; so are directives with an instrument or user selector.
 - OnSong: [metadata block](https://onsongapp.com/docs/features/formats/onsong/metadata), `Verse 1:` labels, bracketed chords and chords over lyrics, `(instructions)`; `# notes` are hidden.
-- iReal Pro: the format isn't published; parsing follows ireal-renderer and ireal-reader (MIT). Charts are drawn as iReal Pro does, 16 cells to a row.
+- iReal Pro: the format isn't published; parsing follows ireal-renderer and ireal-reader (MIT). Charts are drawn as iReal Pro does, see below.
+
+## iReal Pro charts
+
+Drawn as an SVG in iReal Pro's own units (`iRealLayout.ts`): a page 480 wide scaled to the width, rows of 16 cells 28.7 wide and 74 apart. Positions and sizes were measured on iReal Pro's desktop app and iOS screenshots; none of its code or glyphs are used (it draws its own vector glyphs). Free fonts stand in, bundled through Fontsource (OFL):
+
+- **Roboto Condensed** for chords. Small chords (`s`) keep their height and are drawn narrower; qualities sit low, the bass under a slash; text too wide for its cells is squeezed (`svgFit.ts`).
+- **Arimo** for text: it has Arial's widths, which iReal Pro uses, and authors line rhythms up with spaces. `<*74…>` raises text (0 below the bar, 74 above). iOS draws ♩ ♪ about 0.8 em wide, so they get that room.
+- **Noto Music** for ♭ ♯, segno, coda, fermata and repeat signs; **Noto Sans Sundanese** as iReal Pro uses it, for characters systems lack.
 
 ## Playing a chart
 
-ChordPro charts don't play: ChordPro doesn't say how long a lyrics line lasts, and a guess one bar off is no use for rehearsing. OnSong and chords over lyrics don't say either, and still play: a lyrics line lasts one bar per chord (one bar if it has none). iReal bars count as written. Tempo and time come from the chart, else 120 bpm in 4/4. Repeats and codas are not followed. Key in the player and in the viewer is the same control.
+ChordPro charts don't play: ChordPro doesn't say how long a lyrics line lasts, and a guess one bar off is no use for rehearsing. OnSong and chords over lyrics don't say either, and still play: a lyrics line lasts one bar per chord (one bar if it has none). iReal charts play one pass of the form (`iRealForm.ts`): repeats, endings, D.C., D.S., codas; the chart highlights the bar written. Tempo and time come from the chart, else 120 bpm in 4/4. Other formats play as written: they have no repeat signs. Key in the player and in the viewer is the same control.
 
 ## Player
 

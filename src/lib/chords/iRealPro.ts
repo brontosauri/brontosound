@@ -12,6 +12,13 @@ export interface IRealSong {
     key: string; // "C", "Eb-" (minor)
     bpm?: number;
     cells: IRealCell[];
+    bars: IRealBar[];
+}
+
+/** A bar as written: its cells, and the signs in it that steer playback, in the order written */
+export interface IRealBar {
+    cells: IRealCell[];
+    signs: string[]; // "{", "}", "]", "Z", "N1", "*A", "S", "Q", "U", or text: "<D.S. al Coda>"
 }
 
 export interface IRealCell {
@@ -23,14 +30,21 @@ export interface IRealCell {
     timeSignature?: string; // "4/4"
     ending?: string; // "1", "2"
     marks: ('segno' | 'coda' | 'fermata')[];
-    comment?: string;
+    comment?: IRealComment;
     small: boolean; // chords written small: played lightly
     spaceAbove: number; // vertical spacers before this cell's row
+}
+
+/** Text on the chart, `<*74Fine>`: chart authors also use it for rhythms, written with ♩ ♪ and spaces */
+export interface IRealComment {
+    lines: string[]; // "//" breaks a line
+    raise: number; // the "*74" above: 0 sits below the bar, 74 above it
 }
 
 export interface IRealChord {
     root: string; // "C", "Bb", "W" (invisible root: only the bass or the quality changes)
     quality: string; // iReal notation: "^7" major 7, "-7" minor 7, "h7" half-diminished, "o" diminished
+    custom?: string; // written as is, after the quality: "omit3" from "*omit3*"
     bass?: string;
     alternate?: IRealChord; // a smaller chord written above
 }
@@ -51,13 +65,20 @@ function parseSong(data: string): IRealSong {
     const fields = data.split('=');
     const music = unscramble(fields[6]?.split(MUSIC_PREFIX)[1] ?? '');
     return {
-        title: fields[0],
-        composer: fields[1],
+        title: fields[0].replace(/^(.*), The$/, 'The $1'), // stored as "Girl From Ipanema, The" for sorting
+        composer: composerShown(fields[1]),
         style: fields[3],
         key: fields[4],
         bpm: Number(fields[8]) || undefined,
-        cells: parseCells(music),
+        ...parseCells(music),
     };
+}
+
+/** iReal Pro stores composers surname first, for sorting, and shows a two-word name the other way round */
+function composerShown(composer: string): string {
+    if (composer == 'Composer Unknown') return '';
+    const names = composer.trim().split(/\s+/);
+    return names.length == 2 && !names[1].startsWith('(') ? `${names[1]} ${names[0]}` : composer.trim();
 }
 
 /** The music string is scrambled in blocks of 50 characters, except the last one. Scrambling twice unscrambles. */
@@ -89,24 +110,22 @@ const TOKENS = [
     /^N\d/, // ending
     /^<.*?>/, // comment
     CHORD, // a chord, or " " for an empty cell
-    /^LZ/, // a cell boundary and a bar line
-    /^XyQ/, // three empty cells
-    /^Kcl/, // repeat the previous bar
 ];
-const EXPANSIONS: Record<string, string[]> = { LZ: [' ', '|'], XyQ: [' ', ' ', ' '], Kcl: ['|', 'x', ' '] };
+
+/** Shorthands iReal Pro writes for common runs, everywhere in the music string, comments included */
+const SHORTHANDS = { XyQ: '   ', Kcl: '| x', LZ: ' |' };
 
 /** Split the music string into tokens: chords as regex matches, everything else as strings */
 function tokenize(music: string): (string | RegExpExecArray)[] {
     const tokens: (string | RegExpExecArray)[] = [];
-    let rest = music.trimEnd();
+    let rest = Object.entries(SHORTHANDS).reduce((text, [short, long]) => text.replaceAll(short, long), music).trimEnd();
     while (rest) {
         const match = TOKENS.map(token => token.exec(rest)).find(Boolean);
         if (!match) {
             if (rest[0] != ',') tokens.push(rest[0]); // commas only separate tokens
             rest = rest.slice(1);
         } else {
-            if (match.length > 1) tokens.push(match);
-            else tokens.push(...(EXPANSIONS[match[0]] ?? [match[0]]));
+            tokens.push(match.length > 1 ? match : match[0]);
             rest = rest.slice(match[0].length);
         }
     }
@@ -118,18 +137,31 @@ const SYMBOLS: Record<string, IRealCell['symbol']> = { x: 'repeatBar', r: 'repea
 const MARKS: Record<string, IRealCell['marks'][number]> = { S: 'segno', Q: 'coda', f: 'fermata' };
 const SECTION_NAMES: Record<string, string> = { i: 'In', v: 'Verse' };
 
+/** Signs that steer playback: repeats, endings, sections, segno, coda, the end, and text ("D.S. al Coda", "Fine", "3x") */
+const steersPlayback = (token: string) => /^([{}\]ZSQU]|N\d|\*.|<.*>)$/.test(token);
+
 /**
  * Tokens become cells: annotations, bar lines and comments attach to the cell being built,
- * and a chord (or an empty cell, or a symbol) completes it.
+ * and a chord (or an empty cell, or a symbol) completes it. Bars collect their cells and signs.
  */
-function parseCells(music: string): IRealCell[] {
+function parseCells(music: string): { cells: IRealCell[], bars: IRealBar[] } {
     const tokens = tokenize(music);
     const cells: IRealCell[] = [];
     let small = false;
     let cell = newCell(small);
+    let bar: IRealBar = { cells: [], signs: [] };
+    const bars = [bar];
+    const startBar = () => { if (bar.cells.length) bars.push(bar = { cells: [], signs: [] }); };
+    /** As iReal Pro's player reads a chart: bar lines start bars, and a sign is in the bar open where it's written */
+    const followBars = (token: string) => {
+        if (token == '[' || token == '{' || token == '|') startBar();
+        if (steersPlayback(token)) bar.signs.push(token);
+        if (token == ']' || token == '}' || token == 'Z') startBar();
+    };
 
     for (let i = 0; i < tokens.length; i++) {
         const token = tokens[i];
+        if (typeof token == 'string') followBars(token);
         if (typeof token != 'string') {
             cell.chord = parseChord(token);
         } else if (token[0] == '*') {
@@ -139,7 +171,7 @@ function parseCells(music: string): IRealCell[] {
         } else if (token[0] == 'N') {
             cell.ending = token[1];
         } else if (token[0] == '<') {
-            cell.comment = token.slice(1, -1).replace(/^\*\d\d/, '').replaceAll('XyQ', '   ');
+            cell.comment = parseComment(token.slice(1, -1));
         } else if (token in MARKS) {
             cell.marks.push(MARKS[token]);
         } else if (token == 's' || token == 'l') {
@@ -151,7 +183,7 @@ function parseCells(music: string): IRealCell[] {
         } else if (token in SYMBOLS) {
             cell.symbol = SYMBOLS[token];
         } else if (token == 'U' || token == ']' || token == '}' || token == 'Z') {
-            continue; // the end marker for the player; right bar lines are read with the cell before them
+            continue; // the end, for the player; right bar lines are read with the cell before them
         }
         const completesCell = typeof token != 'string' || token == ' ' || token in SYMBOLS;
         if (!completesCell) continue;
@@ -159,9 +191,16 @@ function parseCells(music: string): IRealCell[] {
         const next = tokens[i + 1];
         if (next == ']' || next == '}' || next == 'Z') cell.barEnd = next;
         cells.push(cell);
+        bar.cells.push(cell);
         cell = newCell(small);
     }
-    return cells;
+    return { cells, bars: bars.filter(bar => bar.cells.length) }; // after the final bar line: an empty one
+}
+
+/** `*74Fine`: the text, raised by the number after the star */
+function parseComment(text: string): IRealComment {
+    const raise = /^\*(\d\d)/.exec(text);
+    return { lines: (raise ? text.slice(3) : text).split('//'), raise: Number(raise?.[1] ?? 0) };
 }
 
 function parseChord(match: RegExpExecArray): IRealChord | undefined {
@@ -169,7 +208,8 @@ function parseChord(match: RegExpExecArray): IRealChord | undefined {
     const alternateMatch = alternate && CHORD.exec(alternate.slice(1, -1));
     const chord: IRealChord = {
         root: root.trim(),
-        quality: quality + (custom?.slice(1, -1) ?? ''),
+        quality,
+        custom: custom?.slice(1, -1),
         bass: bass?.slice(1),
         alternate: alternateMatch ? parseChord(alternateMatch) : undefined,
     };
@@ -185,20 +225,4 @@ export function iRealRows(cells: IRealCell[]): IRealCell[][] {
         else row.push(cell);
     }
     return rows;
-}
-
-/** The bar each cell is in (0-based), or null for empty cells after the final bar line */
-export function iRealBarIndexes(cells: IRealCell[]): (number | null)[] {
-    let bar = -1;
-    let inBar = false;
-    return cells.map(cell => {
-        const hasContent = !!(cell.chord || cell.symbol);
-        if (cell.barStart || (!inBar && hasContent)) {
-            bar++;
-            inBar = true;
-        }
-        if (!inBar) return null;
-        if (cell.barEnd) inBar = false;
-        return bar;
-    });
 }

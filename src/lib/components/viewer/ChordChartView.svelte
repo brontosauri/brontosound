@@ -1,6 +1,6 @@
 <script lang="ts">
     import { chartKey, type ChartLine, type ChordChart } from '$lib/chords/chordChart';
-    import { isInRange, type ChartTimeline } from '$lib/chords/chartTimeline';
+    import { isPlaying, type ChartTimeline } from '$lib/chords/chartTimeline';
     import { chordTransposer, transposeKey } from '$lib/chords/chordSymbols';
     import ChordGrid from './ChordGrid.svelte';
     import ChordLyricsLine from './ChordLyricsLine.svelte';
@@ -26,7 +26,7 @@
         chart.meta.time,
     ].filter(Boolean).join(' · '));
 
-    const isActive = (item: object) => activeBar !== null && isInRange(activeBar, timeline?.barsOf.get(item));
+    const isActive = (item: object) => isPlaying(timeline, activeBar, item);
     const COMMENT_STYLES: Record<string, string> = {
         normal: 'bg-gray-100 text-gray-700',
         italic: 'text-gray-600',

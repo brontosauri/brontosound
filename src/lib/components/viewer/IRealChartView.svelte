@@ -1,13 +1,20 @@
 <script lang="ts">
-    import type { BarLine } from '$lib/chords/chordChart';
-    import { isInRange, type ChartTimeline } from '$lib/chords/chartTimeline';
-    import { chordTransposer, transposeKey } from '$lib/chords/chordSymbols';
-    import { iRealRows, type IRealCell, type IRealSong } from '$lib/chords/iRealPro';
-    import BarLineMark from './BarLineMark.svelte';
-    import IRealChordSymbol from './IRealChordSymbol.svelte';
-    import MusicSymbol from './MusicSymbol.svelte';
+    // Free fonts standing in for iReal Pro's: Arial's widths for text, a condensed sans for chords, music signs
+    import '@fontsource/arimo/latin-400.css';
+    import '@fontsource/arimo/latin-700.css';
+    import '@fontsource/roboto-condensed/latin-400.css';
+    import '@fontsource/roboto-condensed/latin-700.css';
+    import '@fontsource/noto-music/music-400.css';
+    import '@fontsource/noto-sans-sundanese/sundanese-400.css';
+    import { isPlaying, type ChartTimeline } from '$lib/chords/chartTimeline';
+    import { chordTransposer } from '$lib/chords/chordSymbols';
+    import { iRealRows, type IRealSong } from '$lib/chords/iRealPro';
+    import { cellX, chartHeight, IREAL, rowTops, TEXT_FONT } from '$lib/chords/iRealLayout';
+    import IRealCellView from './IRealCellView.svelte';
+    import IRealText from './IRealText.svelte';
+    import { squeezeTo } from './svgFit';
 
-    /** An iReal Pro chart as iReal Pro draws it: rows of 16 cells, section letters, repeats, endings, codas */
+    /** An iReal Pro chart as iReal Pro draws it: a page of rows of 16 cells, scaled to the width */
     let { song, timeline, transpose, activeBar }: {
         song: IRealSong,
         timeline: ChartTimeline,
@@ -16,48 +23,31 @@
     } = $props();
 
     let rows = $derived(iRealRows(song.cells));
+    let tops = $derived(rowTops(rows));
     let transposeNote = $derived(chordTransposer(song.key, transpose));
-    let metaLine = $derived([song.composer, song.style, song.key && `Key ${transposeKey(song.key, transpose)}`, song.bpm && `${song.bpm} bpm`].filter(Boolean).join(' · '));
 
-    const BAR_STARTS: Record<string, BarLine> = { '|': { style: 'single' }, '[': { style: 'double' }, '{': { style: 'single', repeatStart: true } };
-    const BAR_ENDS: Record<string, BarLine> = { '|': { style: 'single' }, ']': { style: 'double' }, '}': { style: 'single', repeatEnd: true }, Z: { style: 'end' } };
-    const SYMBOL_TEXT = { repeatBar: '%', repeatTwoBars: '%%', slash: '/', noChord: 'N.C.' };
-
-    const isActive = (cell: IRealCell) => activeBar !== null && isInRange(activeBar, timeline.barsOf.get(cell));
-    /** A row ends with a bar line even when the chart doesn't write one */
-    const barEndOf = (cell: IRealCell, isRowEnd: boolean) => cell.barEnd ?? (isRowEnd ? '|' : undefined);
+    /** A bar line written between rows is drawn at both: the end of one row and the start of the next */
+    const barEndOf = (r: number, i: number) => rows[r][i].barEnd
+        ?? (i == rows[r].length - 1 && rows[r + 1]?.[0].barStart == '|' ? '|' : undefined);
 </script>
 
-<div class="flex flex-col gap-2 px-3 pb-10 pt-5 sm:px-10 sm:pt-7">
-    <div class="mb-2">
-        <div class="text-[22px] font-bold leading-tight text-gray-900">{song.title}</div>
-        {#if metaLine}<div class="mt-1 text-sm text-gray-500">{metaLine}</div>{/if}
-    </div>
-
-    {#each rows as row}
-        <div class="grid grid-cols-[repeat(16,minmax(0,1fr))]" style="margin-top: {12 + row[0].spaceAbove * 10}px">
-            {#each row as cell, i}
-                {@const barEnd = barEndOf(cell, i == row.length - 1)}
-                <div class="relative flex h-12 items-center gap-1.5 pr-1 {isActive(cell) ? 'bg-primary-200' : ''}">
-                    {#if cell.barStart}<span class="flex self-stretch py-1"><BarLineMark barLine={BAR_STARTS[cell.barStart]} /></span>{/if}
-                    {#if barEnd}<span class="absolute inset-y-1 right-0 flex"><BarLineMark barLine={BAR_ENDS[barEnd]} /></span>{/if}
-                    {#if cell.section}<span class="absolute -left-1 -top-3 border border-gray-900 bg-white px-1 text-xs font-bold leading-4">{cell.section}</span>{/if}
-                    {#if cell.ending}<span class="absolute -top-2 left-0 w-[400%] border-l border-t border-gray-500 pl-1 text-[11px] leading-3 text-gray-700">{cell.ending}.</span>{/if}
-                    {#if cell.marks.length}<span class="absolute -top-3 right-0 flex">{#each cell.marks as mark}<MusicSymbol symbol={mark} />{/each}</span>{/if}
-                    {#if cell.comment}<span class="absolute -top-3 left-4 whitespace-nowrap text-[11px] text-gray-600">{cell.comment}</span>{/if}
-                    {#if cell.timeSignature}
-                        <span class="flex flex-col text-center text-[11px] font-bold leading-[11px]">{#each cell.timeSignature.split('/') as part}<span>{part}</span>{/each}</span>
-                    {/if}
-                    {#if cell.chord}
-                        <span class="relative">
-                            {#if cell.chord.alternate}<span class="absolute -top-4 left-0"><IRealChordSymbol chord={cell.chord.alternate} transpose={transposeNote} small /></span>{/if}
-                            {#if cell.chord.root}<IRealChordSymbol chord={cell.chord} transpose={transposeNote} small={cell.small} />{/if}
-                        </span>
-                    {:else if cell.symbol}
-                        <span class="whitespace-nowrap text-lg font-bold text-gray-700">{SYMBOL_TEXT[cell.symbol]}</span>
-                    {/if}
-                </div>
+<div class="px-1 pb-6 pt-3 sm:px-4">
+    <svg viewBox="0 0 {IREAL.width} {chartHeight(rows, tops)}" class="mx-auto block w-full max-w-3xl text-gray-900" role="img" aria-label={song.title}>
+        <g font-family={TEXT_FONT} fill="currentColor">
+            <text x={IREAL.width / 2} y="22" font-size="18" font-weight="700" text-anchor="middle" {@attach squeezeTo(IREAL.width)}>{song.title}</text>
+            {#if song.style}<text x="3" y="36" font-size="16">({song.style})</text>{/if}
+            <text x={IREAL.width - 5} y="36" font-size="16" text-anchor="end">{song.composer}</text>
+        </g>
+        {#each rows as row, r}
+            {#each row as cell, i (cell)}
+                {#if isPlaying(timeline, activeBar, cell)}<rect x={cellX(i)} y={tops[r]} width={IREAL.cellWidth} height={IREAL.barHeight} class="fill-primary-200" />{/if}
             {/each}
-        </div>
-    {/each}
+        {/each}
+        {#each rows as row, r}
+            {#each row as cell, i (cell)}
+                <IRealCellView {cell} x={cellX(i)} y={tops[r]} barEnd={barEndOf(r, i)} transpose={transposeNote} />
+                {#if cell.comment}<IRealText comment={cell.comment} x={cellX(i)} y={tops[r]} />{/if}
+            {/each}
+        {/each}
+    </svg>
 </div>
