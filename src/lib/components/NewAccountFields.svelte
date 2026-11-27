@@ -1,11 +1,12 @@
 <script lang="ts">
     import { verbatim } from '$lib/verbatim';
-    // What everyone picks for a new account (registration.ts): display name, handle and password; and the herd's rules
-    import { Checkbox, Input, Label } from "flowbite-svelte";
+    // What everyone picks for a new account (registration.ts): display name, handle and password; and the Terms
+    import { Input, Label } from "flowbite-svelte";
+    import TermsCheckboxes from "./TermsCheckboxes.svelte";
     import slugify from "slugify";
     import { MIN_PASSWORD_LENGTH } from "$lib/passwordPolicy";
 
-    let { rules }: { rules: string[] } = $props();
+    let { terms }: { terms: { minimumAge: number, consent: string } } = $props();
     let name = $state('');
     let handle = $state('');
     let handleEdited = $state(false);
@@ -26,9 +27,4 @@
     <Input name="password" type="password" class="mt-2" minlength={MIN_PASSWORD_LENGTH} autocomplete="new-password" required />
     <p class="mt-1 text-[13px] font-normal text-gray-500">At least {MIN_PASSWORD_LENGTH} characters. Passwords found in data breaches are refused.</p>
 </Label>
-{#if rules.length}
-    <div class="space-y-2 rounded-lg border border-gray-200 p-4 text-sm text-gray-700">
-        {#each rules as rule}<p>{rule}</p>{/each}
-    </div>
-    <Checkbox name="rules" required>I've read the herd's rules.</Checkbox>
-{/if}
+<TermsCheckboxes {terms} />

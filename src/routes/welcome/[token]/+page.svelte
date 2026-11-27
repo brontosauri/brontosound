@@ -4,6 +4,7 @@
     import { Alert, Button, Heading, P } from "flowbite-svelte";
     import BrontoHeader from "$lib/components/shell/BrontoHeader.svelte";
     import NewAccountFields from "$lib/components/NewAccountFields.svelte";
+    import EarlyAccessNote from "$lib/components/EarlyAccessNote.svelte";
     import SignOut from "../../signin/SignOut.svelte";
 
     let { data, form } = $props();
@@ -25,8 +26,9 @@
             <Alert color="red">{form.error}</Alert>
         {/if}
         <form method="POST" class="space-y-5" use:enhance={() => async ({ update }) => update({ reset: false })}>
-            <NewAccountFields rules={data.rules} />
+            <NewAccountFields terms={data.terms} />
             <Button type="submit" class="w-full">Create account</Button>
         </form>
+        <EarlyAccessNote />
     {/if}
 </main>

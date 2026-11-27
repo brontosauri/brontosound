@@ -6,6 +6,7 @@
     import BrontoHeader from './BrontoHeader.svelte';
     import PageTitle from '$lib/components/PageTitle.svelte';
     import PoweredBy from '$lib/components/PoweredBy.svelte';
+    import LegalBanners from './LegalBanners.svelte';
     import versionInfo from '$lib/version.json';
 
     export let items: NavItem[];
@@ -36,6 +37,7 @@
     {/if}
 
     <div class="pageContent">
+        <LegalBanners />
         {#each $page.data.configWarnings ?? [] as warning}
             <Alert color="red" class="mb-4">{warning}</Alert>
         {/each}
@@ -52,10 +54,11 @@
     <PoweredBy />
     <div class="flex flex-wrap items-center gap-6">
         <span title="Released on {versionInfo.releaseDate}">v{versionInfo.version}</span>
-        <a href="/" class="hover:text-gray-700">About</a>
-        <a href="/" class="hover:text-gray-700">Privacy Policy</a>
-        <a href="/" class="hover:text-gray-700">Licensing</a>
-        <a href="/" class="hover:text-gray-700">Contact</a>
+        <a href="/" class="hover:text-gray-700">{$page.data.herdName}</a>
+        <a href="/rules" class="hover:text-gray-700">Herd rules</a>
+        <a href="/terms" class="hover:text-gray-700">Terms</a>
+        <a href="/privacy" class="hover:text-gray-700">Privacy</a>
+        {#if $page.data.herdContact}<a href="mailto:{$page.data.herdContact}" class="hover:text-gray-700">Contact the admin</a>{/if}
     </div>
 </footer>
 

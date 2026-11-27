@@ -113,6 +113,17 @@ export class User {
     @Column({ type: 'integer', nullable: true, select: false })
     totpLastStep?: number | null;
 
+    // When they accepted the Terms, and which: the effective date of the version in force, null for the template
+    @Column({ type: 'datetime', nullable: true })
+    termsAcceptedAt?: Date | null;
+
+    @Column({ type: 'varchar', nullable: true })
+    termsVersion?: string | null;
+
+    // Joined with Google, which asks for nothing: the app stays locked until they accept the Terms (/accept)
+    @Column({ type: 'boolean', default: false })
+    mustAcceptTerms: boolean;
+
     // The soundfont last picked in the player, by name
     @Column({ type: 'varchar', nullable: true })
     soundfont?: string | null;

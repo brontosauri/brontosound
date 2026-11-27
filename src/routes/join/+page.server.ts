@@ -3,6 +3,7 @@ import { herdSettings } from '$lib/server/herdSettings';
 import { joiningBand } from '$lib/server/inviteLinks';
 import { mayJoin, register, rememberInvite } from '$lib/server/registration';
 import { sendEmailConfirmation } from '$lib/server/emailLinks';
+import { termsAcceptance, termsCheckboxes } from '$lib/server/legal/acceptance';
 import type { Actions, PageServerLoad } from './$types';
 
 // Joining the herd: open to visitors, as registrations allow. `?invite=<token>`: with a band's invite link
@@ -10,13 +11,13 @@ export const load = (async ({ url, cookies, locals }) => {
     if (locals.brontoSession) redirect(303, '/me');
     const token = url.searchParams.get('invite');
     const link = await rememberInvite(cookies, token);
-    const { registrations, rules, contactEmail, googleSignUp } = herdSettings();
+    const { registrations, contactEmail, googleSignUp } = herdSettings();
     return {
         pageTitle: `Join ${herdSettings().herdName}`,
         mayJoin: await mayJoin(token),
         registrations,
         joining: link && joiningBand(link),
-        rules,
+        terms: termsCheckboxes(),
         contactEmail,
         googleSignUp,
     };
@@ -28,8 +29,8 @@ export const actions = {
         const token = url.searchParams.get('invite');
         let user;
         try {
-            if (herdSettings().rules.length && !form.has('rules')) return fail(400, { error: "Read the herd's rules first" });
-            user = await register({ name: form.get('name'), handle: form.get('handle'), email: form.get('email'), password: form.get('password') }, token);
+            const acceptance = await termsAcceptance(form);
+            user = await register({ name: form.get('name'), handle: form.get('handle'), email: form.get('email'), password: form.get('password'), ...acceptance }, token);
             if (user.unconfirmedEmail) await sendEmailConfirmation(user, url.origin);
         } catch (e) {
             if (isHttpError(e)) return fail(e.status, { error: e.body.message });

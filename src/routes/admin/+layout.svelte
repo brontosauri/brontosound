@@ -1,5 +1,5 @@
 <script lang="ts">
-    import { faArrowLeft, faGauge, faGears, faScaleBalanced, faUser, faUsers } from '@fortawesome/free-solid-svg-icons';
+    import { faArrowLeft, faFileContract, faGauge, faGears, faScaleBalanced, faUser, faUsers } from '@fortawesome/free-solid-svg-icons';
     import AppShell from '$lib/components/shell/AppShell.svelte';
 
     let { children } = $props();
@@ -9,6 +9,7 @@
         { name: "Bands", path: "/admin/bands", icon: faUsers },
         { name: "Quotas", path: "/admin/quotas", icon: faScaleBalanced },
         { name: "Herd settings", path: "/admin/settings", icon: faGears },
+        { name: "Legal texts", path: "/admin/legal", icon: faFileContract },
         { name: "Back to your bands", path: "/me", icon: faArrowLeft },
     ];
 </script>

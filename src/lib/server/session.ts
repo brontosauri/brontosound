@@ -11,7 +11,7 @@ export interface BrontoSession {
 }
 
 // Routes open to visitors: every other route needs a signed-in user. `/backline` checks access itself.
-const PUBLIC_ROUTES = ['/', '/rules', '/@[handle]', '/signin', '/signout', '/join', '/join/[token]', '/set-password/[token]', '/forgot', '/confirm/[token]', '/welcome/[token]'];
+const PUBLIC_ROUTES = ['/', '/rules', '/[document=legal]/[[date]]', '/@[handle]', '/signin', '/signout', '/join', '/join/[token]', '/set-password/[token]', '/forgot', '/confirm/[token]', '/welcome/[token]'];
 
 /**
  * Whether visitors may reach a route, by its id: the route SvelteKit matched, not the URL, which may be

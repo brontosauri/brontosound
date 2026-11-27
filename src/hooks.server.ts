@@ -48,6 +48,13 @@ export const authorizationHandle: Handle = async ({ event, resolve }) => {
                 error(403, "The herd's admins suspended this band. Ask them why.");
             }
         }
+        // Joined with Google: nothing but the Terms until they accept them
+        if (brontoUser.mustAcceptTerms && !isPublicRoute(event.route.id) && event.route.id !== '/accept') {
+            if (isApiRoute(event.route.id)) {
+                error(403, 'Accept the Terms first');
+            }
+            redirect(303, `/accept?then=${encodeURIComponent(event.url.pathname + event.url.search)}`);
+        }
         brontoSession = {
             user: instanceToPlain(brontoUser) as User,
             auth: authSession,

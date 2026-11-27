@@ -1,5 +1,6 @@
 import { error, fail, isHttpError } from '@sveltejs/kit';
 import { herdSettings, Registrations, saveHerdSettings, type HerdSettingsData } from '$lib/server/herdSettings';
+import { herdSettingEntries } from '$lib/server/herdSettingEntries';
 import { requireHerdAdmin } from '$lib/server/admin';
 import { settingsFromForm } from '$lib/server/settingsForm';
 import { text } from '$lib/server/input';
@@ -7,25 +8,15 @@ import { listSoundfonts } from '$lib/server/soundfonts';
 import { testSmtp } from '$lib/server/mail';
 import { MAPS_PROVIDERS } from '$lib/maps/providers';
 import { LOCALES } from '$lib/locales';
-import type { SettingEntry, SettingsSection, TextFormat } from '$lib/components/settings/settingEntries';
+import type { SettingsSection } from '$lib/components/settings/settingEntries';
 import type { Actions, PageServerLoad } from './$types';
-
-type Key = keyof HerdSettingsData;
 
 const EMAIL_SECTION = 'email';
 
 
-/** The herd settings form, with the saved values. Secrets (tokens, keys) are never sent */
+/** The herd settings form, with the saved values */
 async function sections(): Promise<SettingsSection[]> {
-    const s = herdSettings();
-    const text = (label: string, key: Key, hint?: string, format?: TextFormat): SettingEntry => ({ kind: 'text', label, key, hint, format, value: String(s[key] ?? '') });
-    const number = (label: string, key: Key, hint?: string): SettingEntry => ({ kind: 'number', label, key, hint, value: Number(s[key]) });
-    const toggle = (label: string, key: Key, hint?: string): SettingEntry => ({ kind: 'toggle', label, key, hint, value: Boolean(s[key]) });
-    const secret = (label: string, key: Key): SettingEntry => ({ kind: 'secret', label, key, isSet: Boolean(s[key]) });
-    const lines = (label: string, key: Key, hint?: string, format?: 'verbatim'): SettingEntry => ({ kind: 'lines', label, key, hint, format, value: s[key] as string[] });
-    const choice = (label: string, key: Key, options: { value: string, name: string }[], hint?: string): SettingEntry =>
-        ({ kind: 'choice', label, key, hint, value: String(s[key] ?? ''), options });
-
+    const { text, number, toggle, secret, lines, choice } = herdSettingEntries();
     const soundfonts = [{ value: '', name: 'The first one after the synth' }, ...(await listSoundfonts()).map(({ name }) => ({ value: name, name }))];
     return [
         { id: "herd", title: "Herd", entries: [
@@ -33,7 +24,7 @@ async function sections(): Promise<SettingsSection[]> {
             text("Tagline", "tagline"),
             text("Contact email", "contactEmail", "Shown when registrations are closed, and in the footer.", 'email'),
             choice("Default language and dates", "locale", LOCALES, "Each person can pick their own."),
-            lines("Herd rules", "rules", "One paragraph per line. Shown at sign-up and in the footer."),
+            lines("Herd rules", "rules", "One paragraph per line. At /rules: part of the Terms."),
         ] },
         { id: "registrations", title: "Registrations", entries: [
             choice("Who can join", "registrations", [

@@ -5,6 +5,7 @@
     import BrontoHeader from "$lib/components/shell/BrontoHeader.svelte";
     import JoiningBand from "$lib/components/JoiningBand.svelte";
     import NewAccountFields from "$lib/components/NewAccountFields.svelte";
+    import EarlyAccessNote from "$lib/components/EarlyAccessNote.svelte";
     import SignIn from "../signin/SignIn.svelte";
 
     let { data, form } = $props();
@@ -34,9 +35,10 @@
         {/if}
         <form method="POST" class="space-y-5" use:enhance={() => async ({ update }) => update({ reset: false })}>
             <Label>Email<Input name="email" type="email" class="mt-2" autocomplete="email" required /></Label>
-            <NewAccountFields rules={data.rules} />
+            <NewAccountFields terms={data.terms} />
             <Button type="submit" class="w-full">{data.joining ? `Create account and join ${data.joining.name}` : 'Create account'}</Button>
         </form>
+        <EarlyAccessNote />
         <p class="text-center text-sm text-gray-500">Already in the herd? <a href={data.joining ? `/signin?invite=${token}` : '/signin'} class="font-medium text-primary-800">Sign in</a></p>
     {/if}
 </main>

@@ -50,6 +50,8 @@ export interface HerdSettingsData {
     defaultSoundfont?: string; // by name
     backlineStunServers: string[]; // tell Backline and the browsers on /backline their public addresses (docs/backline.md)
     quotas: Limits; // the herd's defaults ($lib/quotas.ts)
+    minimumAge: number; // to sign up
+    signUpConsent: string; // a second, required checkbox at sign-up; empty: none
 }
 
 export const defaultHerdSettings: HerdSettingsData = {
@@ -79,6 +81,8 @@ export const defaultHerdSettings: HerdSettingsData = {
     soundfonts: [],
     backlineStunServers: ["stun:stun.l.google.com:19302"],
     quotas: { bandsPerUser: 2, storagePerBand: 5, largestFile: 200, membersPerBand: 20, backlineGuests: 50 },
+    minimumAge: 16,
+    signUpConsent: "",
 }
 
 const SETTINGS_ID = 1;

@@ -9,6 +9,7 @@ import { Band, Invite, InviteLink, Membership } from "./dbEntities/band";
 import { HerdSettings } from "./dbEntities/herd";
 import { Picture } from "./dbEntities/picture";
 import { ProfileReport } from "./dbEntities/report";
+import { LegalVersion } from "./dbEntities/legal";
 import { instanceToPlain, plainToClass, type ClassConstructor } from "class-transformer";
 
 class TypeOrm {
@@ -27,6 +28,7 @@ class TypeOrm {
             HerdSettings,
             Picture,
             ProfileReport,
+            LegalVersion,
             User,
             UserAccount,
             PasswordLink,

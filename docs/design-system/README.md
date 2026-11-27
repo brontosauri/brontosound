@@ -28,7 +28,7 @@ The app is built with SvelteKit, Tailwind and Flowbite. The orange scale is Tail
 - Destructive actions use `danger` (#C81E1E). A delete button is outlined until the final confirmation, which is the only solid red button.
 - Contrast flag: white on `accent` is 3.7:1. That is the brand's shipped pair, AA only for large or bold text. Keep it, but don't add new small white-on-orange text.
 
-**Type.** Ubuntu throughout (Google Fonts), and Ubuntu Mono for storage paths.
+**Type.** Ubuntu throughout (self-hosted, `@fontsource`), and Ubuntu Mono for storage paths.
 - One `page-title` (48px bold) per page. `section-title` (36px) for blocks within a page.
 - `card-title` and `panel-title` for cards. `body` and `body-sm` for everything else. `label` (medium) for buttons and form labels.
 - No italic, no light weights.

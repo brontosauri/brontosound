@@ -9,6 +9,7 @@ import { findHerdInvite, useHerdInvite } from './herdInvites';
 import { findLink } from './inviteLinks';
 import { hashPassword } from './password';
 import { newToken } from './tokens';
+import type { TermsAcceptance } from './legal/acceptance';
 import { countLoginAttempt, findUserByLogin, isUniqueViolation, MAX_LOGIN_ATTEMPTS, newPasswordProblem, normalizeEmail } from './users';
 
 // Joining the herd (/join), as its registrations allow: open, with a band's invite link, or not at all; or with
@@ -35,7 +36,7 @@ export async function mayJoin(inviteToken: string | null | undefined): Promise<b
         || (registrations == Registrations.INVITE && !!inviteToken && (await findLink(inviteToken))?.end === null);
 }
 
-type AccountInput = { name: unknown, handle: unknown, password: unknown };
+type AccountInput = { name: unknown, handle: unknown, password: unknown } & TermsAcceptance;
 
 /** A new user with a password, refused when they may not join. Throttled per address */
 export async function register(input: AccountInput & { email: unknown }, inviteToken: string | null): Promise<User> {
@@ -74,15 +75,15 @@ function throttleSignUps(): void {
     if (countLoginAttempt(`join|${getRequestEvent().getClientAddress()}`) > MAX_LOGIN_ATTEMPTS) error(429, 'Too many sign-ups from here. Try again in 15 minutes');
 }
 
-/** What everyone picks for a new account, checked: display name, handle and password (hashed) */
-async function accountFields(input: AccountInput): Promise<Pick<User, 'name' | 'handle' | 'passwordHash'> & { handle: string }> {
+/** What everyone picks for a new account, checked: display name, handle and password (hashed); and their acceptance */
+async function accountFields(input: AccountInput): Promise<Pick<User, 'name' | 'handle' | 'passwordHash'> & TermsAcceptance & { handle: string }> {
     const name = String(input.name ?? '').trim().slice(0, 100);
     const handle = validHandle(input.handle);
     const password = String(input.password ?? '');
     if (!name) error(400, 'Your display name, please');
     const problem = await newPasswordProblem(password);
     if (problem) error(400, problem);
-    return { name, handle, passwordHash: await hashPassword(password) };
+    return { name, handle, passwordHash: await hashPassword(password), termsAcceptedAt: input.termsAcceptedAt, termsVersion: input.termsVersion };
 }
 
 async function saveNewUser(fields: Partial<User>): Promise<User> {
@@ -97,14 +98,14 @@ async function saveNewUser(fields: Partial<User>): Promise<User> {
 
 /**
  * At a first Google sign-in with no account for its verified email: creates one, without a handle (they pick it),
- * if the herd lets people join with Google now. Returns whether it did
+ * if the herd lets people join with Google now. Returns whether it did. They accept the Terms next (/accept)
  */
 export async function joinWithGoogle(email: string, name: string, providerAccountId: string): Promise<boolean> {
     const event = getRequestEvent();
     if (!herdSettings().googleSignUp || await findUserByLogin(email) || !await mayJoin(event.cookies.get(INVITE_COOKIE))) {
         return false;
     }
-    const user = await saveNewUser({ email, username: email, name: name.slice(0, 100) || email });
+    const user = await saveNewUser({ email, username: email, name: name.slice(0, 100) || email, mustAcceptTerms: true });
     await (await TypeOrm.getRepository(UserAccount)).insert({ user: { id: user.id }, provider: 'google', providerAccountId, email });
     return true;
 }
