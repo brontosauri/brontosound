@@ -21,6 +21,7 @@ Users and bands share one namespace of handles (`/@lucia`, `/@the-ammonites`), c
 - **Bands** ([bandAdmin.ts](../src/lib/server/bandAdmin.ts)): metadata only. Suspend (locked for members, Backline session ended), rename, delete with its herd storage, confirmed by typing the handle.
 - **Quotas** ([quotas.ts](../src/lib/server/quotas.ts), [$lib/quotas.ts](../src/lib/quotas.ts)): herd defaults in herd settings, overrides in `quotaOverrides` on the `User` or `Band`. Checked when creating a band, inviting, uploading to herd storage (own WebDAV isn't counted) and seating Backline guests.
 - **Herd settings**: one form, saved with only what differs from the defaults.
+- **Legal texts** ([legal/documents.ts](../src/lib/server/legal/documents.ts)): the Terms and Privacy Policy, drafted and published with an effective date; see [operating.md](operating.md).
 
 ## Band routes
 
@@ -36,7 +37,7 @@ Owners invite by @handle: the invite waits in that person's `/me` and in the ban
 
 - `/`: the herd's home: name, tagline, how to join, its public bands.
 - `/@handle` ([publicProfiles.ts](../src/lib/server/publicProfiles.ts)): a band's profile (about, links, confirmed gigs to come, members whose profile allows it) or a person's (about, instruments, bands). Public, or hidden: then only bandmates see it. Signed-in people report profiles to admins ([reports.ts](../src/lib/server/reports.ts)).
-- `/rules`: the herd's rules. Pictures (avatars, logos) are served at `/pictures/<id>` ([pictures.ts](../src/lib/server/pictures.ts)): PNG, JPEG or WebP, checked by their bytes.
+- `/rules`: the herd's rules. `/terms` and `/privacy`: its legal texts, past versions at `/terms/<date>`. Pictures (avatars, logos) are served at `/pictures/<id>` ([pictures.ts](../src/lib/server/pictures.ts)): PNG, JPEG or WebP, checked by their bytes.
 
 ## Settings
 

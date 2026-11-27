@@ -72,7 +72,7 @@ Run:
 docker run -p 3888:3000 -e ORIGIN="http://localhost:3888" -v ./config:/app/config -v ./data:/app/data brontosound:latest
 ```
 
-Online, behind a proxy: see [docs/deployment.md](docs/deployment.md).
+Online, behind a proxy: see [docs/deployment.md](docs/deployment.md). Before opening a herd to others: [docs/operating.md](docs/operating.md).
 
 Debug:
 

@@ -54,6 +54,7 @@ Conventional Commits (`feat:`, `fix:`, `refactor:`, …) — `standard-version` 
 - Song files (readme, chordpro) live in file storage, not the DB: `PersistedStorage` in [src/lib/server/storage.ts](src/lib/server/storage.ts), per band via `bandStorage()` ([bands.ts](src/lib/server/bands.ts)): a folder of `data/files/` or the band's own WebDAV. Storage refuses paths outside the songs folder; never build paths from client input without `isFolderName()` or the song-scoped helpers in [songFolder.ts](src/lib/server/songFolder.ts).
 - Song page: folder browser, viewer (chord chart formats, PDF…) and practice player, see [docs/songPage.md](docs/songPage.md).
 - Venue maps: the provider (OpenStreetMap, Mapbox, HERE, Google) is chosen by `mapsProvider` in herd settings, see [docs/maps.md](docs/maps.md); code in `src/lib/maps/` and `src/lib/components/maps/`.
+- Legal: Terms and Privacy Policy, versioned, from CC0 templates (`src/lib/server/legal/`); new accounts accept the Terms. What operators do: [docs/operating.md](docs/operating.md).
 - `+page.server.ts` loads conventionally return `pageTitle` and `breadcrumb` alongside data.
 - Dates in the UI go through `formatDate()` ([dates.ts](src/lib/dates.ts)): the person's language, else the herd's.
 - URLs are `/<id>/<slug>`, under the band's: build them with `bandAppUrl`/`buildVenueUrl`/`buildGigUrl` in [src/lib/misc.ts](src/lib/misc.ts); in the browser, call the band's API through `bandApi()` ([bandApi.ts](src/lib/bandApi.ts)).

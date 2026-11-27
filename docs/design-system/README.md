@@ -51,6 +51,7 @@ The app is built with SvelteKit, Tailwind and Flowbite. The orange scale is Tail
 - Focus: Flowbite defaults. Buttons get a 4px `primary-300` ring; inputs get a `primary-500` border and ring. The button ring is under 3:1 on white, so a stronger ring (`primary-700`) is a known open item.
 - Deleted or archived rows: `ink-muted` text. Their action buttons stay at full strength.
 - Saving: settings come in cards (`SettingsCard`), each with its own Save button (`SaveForm`). What happened shows beside the button ("Saved", "Not saved: …"), never in a banner at the top of the page.
+- Banners: only for a change the person must know about, and closable. Never a reminder, a tip or a warning that isn't one.
 
 **Imagery.** None inside the app. The only images are the band logo in the header and the Brontosound mark in the footer.
 
